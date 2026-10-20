@@ -1,0 +1,327 @@
+<Window x:Class="Orbit.App.Views.ImageAnnotationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Orbit — Image Annotator"
+        Height="800" Width="1180"
+        MinHeight="600" MinWidth="850"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource OrbitBackgroundBrush}">
+
+    <Window.Resources>
+        <!-- Tool Button Style -->
+        <Style x:Key="ToolButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource OrbitTextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="{StaticResource OrbitSurfaceHoverBrush}" />
+                                <Setter TargetName="BtnBorder" Property="BorderBrush" Value="{StaticResource OrbitBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="{StaticResource OrbitAccentBrush}" />
+                                <Setter TargetName="BtnBorder" Property="BorderBrush" Value="#FFA552" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Mini Color Swatch Style -->
+        <Style x:Key="ColorSwatchStyle" TargetType="Button">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="12" 
+                                BorderBrush="#454A5C" 
+                                BorderThickness="1.5">
+                            <Ellipse x:Name="InnerDot" Width="8" Height="8" Fill="White" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="White" />
+                            </Trigger>
+                            <Trigger Property="Tag" Value="Selected">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource OrbitAccentBrush}" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="InnerDot" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Top Header Bar -->
+            <RowDefinition Height="Auto"/>
+            <!-- Main Work Area (Sidebar + Canvas) -->
+            <RowDefinition Height="*"/>
+            <!-- Bottom Status Footer -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- TOP HEADER BAR -->
+        <Border Grid.Row="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Left: Title & File Badge -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Center: History & Zoom Controls -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Right: Save & Export Buttons -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Section: Title & Loaded Image Meta -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="30" Height="30" CornerRadius="6" Background="{StaticResource OrbitAccentBrush}" Margin="0,0,10,0">
+                        <TextBlock Text="✎" Foreground="White" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Image Annotator" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="15" FontWeight="Bold"/>
+                        <TextBlock x:Name="TxtImageMeta" Text="No image loaded" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" Margin="0,1,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Center Section: Undo, Redo, Zoom Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Open Image Button -->
+                    <Button x:Name="BtnOpenImage" Content="📂 Open Image" Style="{StaticResource OrbitSecondaryButtonStyle}" Padding="10,6" Margin="0,0,14,0" Click="OnOpenImageClicked"/>
+
+                    <!-- Separator -->
+                    <Rectangle Width="1" Height="20" Fill="{StaticResource OrbitBorderBrush}" Margin="0,0,14,0"/>
+
+                    <!-- Undo / Redo -->
+                    <Button x:Name="BtnUndo" ToolTip="Undo (Ctrl+Z)" Style="{StaticResource ToolButtonStyle}" Width="34" Height="34" Margin="2,0" IsEnabled="False" Click="OnUndoClicked">
+                        <TextBlock Text="↶" FontSize="16" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
+                    </Button>
+                    <Button x:Name="BtnRedo" ToolTip="Redo (Ctrl+Y)" Style="{StaticResource ToolButtonStyle}" Width="34" Height="34" Margin="2,0" IsEnabled="False" Click="OnRedoClicked">
+                        <TextBlock Text="↷" FontSize="16" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
+                    </Button>
+
+                    <!-- Separator -->
+                    <Rectangle Width="1" Height="20" Fill="{StaticResource OrbitBorderBrush}" Margin="12,0"/>
+
+                    <!-- Zoom Controls -->
+                    <Button x:Name="BtnZoomOut" ToolTip="Zoom Out" Style="{StaticResource ToolButtonStyle}" Width="32" Height="32" Click="OnZoomOutClicked">
+                        <TextBlock Text="−" FontSize="16" FontWeight="Bold" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
+                    </Button>
+
+                    <ComboBox x:Name="CmbZoom" Width="82" Height="32" Margin="4,0"
+                              Style="{StaticResource OrbitComboBoxStyle}"
+                              SelectionChanged="OnZoomSelectionChanged"
+                              VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
+                        <ComboBoxItem Content="Fit" />
+                        <ComboBoxItem Content="50%" />
+                        <ComboBoxItem Content="75%" />
+                        <ComboBoxItem Content="100%" IsSelected="True"/>
+                        <ComboBoxItem Content="125%" />
+                        <ComboBoxItem Content="150%" />
+                        <ComboBoxItem Content="200%" />
+                        <ComboBoxItem Content="300%" />
+                    </ComboBox>
+
+                    <Button x:Name="BtnZoomIn" ToolTip="Zoom In" Style="{StaticResource ToolButtonStyle}" Width="32" Height="32" Click="OnZoomInClicked">
+                        <TextBlock Text="+" FontSize="16" FontWeight="Bold" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
+                    </Button>
+
+                    <Button x:Name="BtnZoomReset" Content="100%" ToolTip="Reset Zoom" Style="{StaticResource OrbitSecondaryButtonStyle}" Padding="8,5" Margin="6,0,0,0" Click="OnZoomResetClicked"/>
+                </StackPanel>
+
+                <!-- Right Section: Save As & Quick Save -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnSaveQuick" Content="Save" ToolTip="Overwrite original image" 
+                            Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,10,0" Click="OnQuickSaveClicked"/>
+                    <Button x:Name="BtnSaveAs" Content="💾 Save As..." ToolTip="Export annotated image to disk" 
+                            Style="{StaticResource OrbitAccentButtonStyle}" Click="OnSaveAsClicked"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- MAIN WORK AREA -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <!-- Left Sidebar Toolbar -->
+                <ColumnDefinition Width="64"/>
+                <!-- Canvas Center -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT SIDEBAR TOOLBAR -->
+            <Border Grid.Column="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,1,0" Padding="8,12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel HorizontalAlignment="Center">
+                        <!-- Select Tool -->
+                        <Button x:Name="BtnToolSelect" Tag="Active" ToolTip="Select / Move Annotations (V)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="↖" FontSize="18" FontWeight="Bold"/>
+                        </Button>
+
+                        <!-- Crop Tool -->
+                        <Button x:Name="BtnToolCrop" ToolTip="Crop Selection (C)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="⌗" FontSize="18" FontWeight="Bold"/>
+                        </Button>
+
+                        <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,8"/>
+
+                        <!-- Red Arrow -->
+                        <Button x:Name="BtnToolArrow" ToolTip="Directional Arrow (A)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="➔" FontSize="18" Foreground="#EF4444" FontWeight="Bold"/>
+                        </Button>
+
+                        <!-- Rectangle -->
+                        <Button x:Name="BtnToolRectangle" ToolTip="Rectangle Shape (R)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="▭" FontSize="18" FontWeight="Bold"/>
+                        </Button>
+
+                        <!-- Circle / Ellipse -->
+                        <Button x:Name="BtnToolCircle" ToolTip="Circle Shape (O)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="○" FontSize="18" FontWeight="Bold"/>
+                        </Button>
+
+                        <!-- Text Callout -->
+                        <Button x:Name="BtnToolText" ToolTip="Text Callout (T)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="T" FontSize="17" FontWeight="Bold"/>
+                        </Button>
+
+                        <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,8"/>
+
+                        <!-- Blur / Pixelate -->
+                        <Button x:Name="BtnToolBlur" ToolTip="Blur Sensitive Area (B)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="░" FontSize="20" FontWeight="Bold" Foreground="#38BDF8"/>
+                        </Button>
+
+                        <!-- Highlight -->
+                        <Button x:Name="BtnToolHighlight" ToolTip="Highlight (H)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="▮" FontSize="18" Foreground="#FACC15"/>
+                        </Button>
+
+                        <!-- Redact -->
+                        <Button x:Name="BtnToolRedact" ToolTip="Redact Privacy Bar (Solid Black) (X)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <Border Width="20" Height="8" Background="Black" BorderBrush="#64748B" BorderThickness="1" CornerRadius="1"/>
+                        </Button>
+
+                        <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,8"/>
+
+                        <!-- Color Palette Pop-Out / Swatches -->
+                        <TextBlock Text="COLOR" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <Button x:Name="SwatchRed" Background="#EF4444" Tag="Selected" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Red"/>
+                        <Button x:Name="SwatchOrange" Background="#FF7A1A" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Orange"/>
+                        <Button x:Name="SwatchYellow" Background="#F59E0B" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Yellow"/>
+                        <Button x:Name="SwatchGreen" Background="#10B981" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Green"/>
+                        <Button x:Name="SwatchCyan" Background="#06B6D4" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Cyan"/>
+                        <Button x:Name="SwatchWhite" Background="#FFFFFF" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="White"/>
+                        <Button x:Name="SwatchBlack" Background="#000000" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Black"/>
+
+                        <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,8"/>
+
+                        <!-- Stroke Thickness Button -->
+                        <TextBlock Text="SIZE" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <Button x:Name="BtnStrokeWidth" Content="4px" ToolTip="Stroke Width (click to cycle 2, 4, 8, 12px)" 
+                                Style="{StaticResource ToolButtonStyle}" Width="36" Height="28" FontSize="11" Click="OnStrokeWidthCycleClicked"/>
+
+                        <!-- Delete Selected -->
+                        <Button x:Name="BtnDeleteSelected" ToolTip="Delete Selected Annotation (Del)" Style="{StaticResource ToolButtonStyle}" Margin="0,8,0,0" Click="OnDeleteSelectedClicked">
+                            <TextBlock Text="🗑" FontSize="15" Foreground="#EF4444"/>
+                        </Button>
+
+                        <!-- Clear All -->
+                        <Button x:Name="BtnClearAll" ToolTip="Clear All Markups" Style="{StaticResource ToolButtonStyle}" Click="OnClearAllClicked">
+                            <TextBlock Text="✕" FontSize="14" Foreground="{StaticResource OrbitTextSecondaryBrush}"/>
+                        </Button>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- CENTER CANVAS AREA -->
+            <Grid Grid.Column="1" Background="#13141A" AllowDrop="True" Drop="OnCanvasDrop" DragOver="OnCanvasDragOver">
+                <ScrollViewer x:Name="ImageScrollViewer" 
+                              HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Auto"
+                              Background="Transparent"
+                              PreviewMouseWheel="OnScrollViewerPreviewMouseWheel">
+                    <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="32">
+                        <!-- Canvas with natural pixel dimensions and scale transform -->
+                        <Canvas x:Name="DrawingCanvas"
+                                Width="800" Height="600"
+                                Background="Transparent"
+                                MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
+                                MouseMove="OnCanvasMouseMove"
+                                MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
+                            <Canvas.LayoutTransform>
+                                <ScaleTransform x:Name="CanvasScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+                            </Canvas.LayoutTransform>
+
+                            <!-- Base Image Render Target -->
+                            <Image x:Name="BaseImageElement" Stretch="None"/>
+
+                            <!-- Active Annotation Elements reside as children here -->
+                        </Canvas>
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Empty State Prompt (shown when no image is loaded) -->
+                <Border x:Name="EmptyStatePrompt" 
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="{StaticResource OrbitSurfaceBrush}" 
+                        BorderBrush="{StaticResource OrbitBorderBrush}" 
+                        BorderThickness="2" CornerRadius="16" 
+                        Padding="36,28" MaxWidth="440" IsHitTestVisible="False">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource OrbitAccentSubtleBrush}" HorizontalAlignment="Center" Margin="0,0,0,14">
+                            <TextBlock Text="🖼" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Drag &amp; Drop Image Here" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Supports PNG, JPG, WebP, BMP, GIF, TIFF. Markup with arrows, callouts, blur, and privacy redaction." 
+                                   Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,16"/>
+                        <Button Content="Choose Image File..." Style="{StaticResource OrbitAccentButtonStyle}" HorizontalAlignment="Center" Click="OnOpenImageClicked" IsHitTestVisible="True"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- BOTTOM STATUS FOOTER -->
+        <Border Grid.Row="2" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,1,0,0" Padding="14,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtStatusMessage" Text="Ready" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11"/>
+                    <TextBlock Text=" • " Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" Margin="4,0"/>
+                    <TextBlock x:Name="TxtToolHint" Text="Tool: Select (Click to select/drag annotations)" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Shortcuts: Ctrl+Z Undo • Ctrl+Y Redo • Del Remove • Ctrl+Scroll Zoom" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

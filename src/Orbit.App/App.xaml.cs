@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using Orbit.App.Interop;
 using Orbit.App.Views;
 using Orbit.Core.Models;
 using Orbit.Core.Native;
@@ -17,6 +18,7 @@ public partial class App : Application
     private ServiceProvider? _serviceProvider;
     private GlobalInputMonitor? _inputMonitor;
     private OverlayWindow? _overlayWindow;
+    private TrayIconManager? _trayIconManager;
 
     public static IServiceProvider Services { get; private set; } = null!;
 
@@ -56,6 +58,9 @@ public partial class App : Application
             System.Diagnostics.Trace.WriteLine($"[Orbit] Could not start low-level hooks: {ex.Message}");
         }
 
+        // Initialize Tray Icon
+        _trayIconManager = _serviceProvider.GetRequiredService<TrayIconManager>();
+
         // Show main control center window
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -67,16 +72,28 @@ public partial class App : Application
         services.AddSingleton<IFileIdentifier, FileIdentifier>();
         services.AddSingleton<IOperationRegistry, OperationRegistry>();
         services.AddSingleton<ICapabilityResolver, CapabilityResolver>();
+        services.AddSingleton<ISettingsService, SettingsService>();
 
         // Execution Engines
         services.AddSingleton<IProcessingEngine, ImageProcessingEngine>();
         services.AddSingleton<IProcessingEngine, TextDataProcessingEngine>();
+        services.AddSingleton<IProcessingEngine, ArchiveProcessingEngine>();
+        services.AddSingleton<IProcessingEngine, PdfProcessingEngine>();
+        services.AddSingleton<IProcessingEngine, MediaProcessingEngine>();
         services.AddSingleton<IJobManager, JobManager>();
+
+        // System Tray Integration
+        services.AddSingleton<TrayIconManager>();
 
         // Native Monitors & Windows
         services.AddSingleton<GlobalInputMonitor>();
         services.AddSingleton<OverlayWindow>();
         services.AddSingleton<MainWindow>();
+
+        // Dedicated UI Workspaces
+        services.AddTransient<ImageAnnotationWindow>();
+        services.AddTransient<BatchOperationsWindow>();
+        services.AddTransient<SettingsWindow>();
     }
 
     private void OnOrbitTriggered(int screenX, int screenY)
@@ -134,6 +151,30 @@ public partial class App : Application
     {
         if (_serviceProvider == null) return;
 
+        // 1. If an annotation / workspace operation is selected, open ImageAnnotationWindow
+        if (operation.Category == OperationCategory.Annotate || operation.RequiresWorkspace || operation.Id.StartsWith("image-annotate"))
+        {
+            var annotator = _serviceProvider.GetRequiredService<ImageAnnotationWindow>();
+            if (files.Length > 0)
+            {
+                annotator.LoadImage(files[0].FilePath);
+            }
+            annotator.Show();
+            annotator.Activate();
+            return;
+        }
+
+        // 2. If multiple files are selected, open BatchOperationsWindow
+        if (files.Length > 1)
+        {
+            var batchWindow = _serviceProvider.GetRequiredService<BatchOperationsWindow>();
+            batchWindow.SetBatch(operation, files);
+            batchWindow.Show();
+            batchWindow.Activate();
+            return;
+        }
+
+        // 3. Otherwise standard single-file direct job execution
         var jobManager = _serviceProvider.GetRequiredService<IJobManager>();
         var request = new OperationRequest
         {
@@ -155,6 +196,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _trayIconManager?.Dispose();
         _inputMonitor?.Dispose();
         _serviceProvider?.Dispose();
         base.OnExit(e);

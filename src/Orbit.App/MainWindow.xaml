@@ -2,15 +2,20 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Orbit — Ambient Radial Action Canvas"
-        Height="620" Width="960"
-        MinHeight="500" MinWidth="800"
+        Height="700" Width="1040"
+        MinHeight="580" MinWidth="850"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource OrbitBackgroundBrush}">
     
     <Grid Margin="24">
         <Grid.RowDefinitions>
+            <!-- Header -->
             <RowDefinition Height="Auto"/>
+            <!-- Dedicated Workspaces Row -->
+            <RowDefinition Height="Auto"/>
+            <!-- Main Body: Drop target and Capabilities test pad -->
             <RowDefinition Height="*"/>
+            <!-- Footer -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -28,7 +33,7 @@
                             <TextBlock Text="◎" Foreground="White" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
                         </Border>
                         <TextBlock Text="ORBIT" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
-                        <Border Background="#1E293B" CornerRadius="6" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <Border Background="#2C2F3E" CornerRadius="6" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="v0.1.0-alpha" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
@@ -37,21 +42,101 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#132E27" BorderBrush="#059669" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,10,0">
+                    <Border Background="#132E27" BorderBrush="#059669" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="8" Height="8" Fill="#10B981" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Tray Listener Active" Foreground="#34D399" FontSize="12" FontWeight="Medium"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="BtnMinimizeToTray" Content="Minimize to Tray" Padding="12,6" 
-                            Background="{StaticResource OrbitSurfaceHoverBrush}" Foreground="{StaticResource OrbitTextPrimaryBrush}" 
-                            BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" Cursor="Hand" Click="OnMinimizeToTrayClicked"/>
+                    <Button x:Name="BtnHeaderSettings" Content="⚙ Settings" Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,8,0" Click="OnOpenSettingsClicked"/>
+                    <Button x:Name="BtnMinimizeToTray" Content="Minimize to Tray" Style="{StaticResource OrbitSecondaryButtonStyle}" Click="OnMinimizeToTrayClicked"/>
                 </StackPanel>
             </Grid>
         </Border>
 
+        <!-- DEDICATED WORKSPACES ACTION CARDS -->
+        <Grid Grid.Row="1" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Card 1: Image Annotator -->
+            <Border Grid.Column="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,8,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Width="26" Height="26" CornerRadius="6" Background="#2C2F3E" Margin="0,0,10,0">
+                            <TextBlock Text="✎" Foreground="{StaticResource OrbitAccentBrush}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Image Annotator" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Markup screenshots, draw arrows, rectangles, blur sensitive areas, and solid black redaction." 
+                               Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                    <Button x:Name="BtnLaunchAnnotator" Grid.Row="2" Content="Launch Annotator" Style="{StaticResource OrbitAccentButtonStyle}" 
+                            HorizontalAlignment="Left" Padding="14,6" FontSize="12" Click="OnOpenAnnotatorClicked"/>
+                </Grid>
+            </Border>
+
+            <!-- Card 2: Batch Operations -->
+            <Border Grid.Column="1" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="4,0,4,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Width="26" Height="26" CornerRadius="6" Background="#2C2F3E" Margin="0,0,10,0">
+                            <TextBlock Text="⚡" Foreground="{StaticResource OrbitAccentBrush}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Batch Operations" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Batch convert, resize, transcode, and process multi-file queues with real progress tracking." 
+                               Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                    <Button x:Name="BtnLaunchBatchOps" Grid.Row="2" Content="Launch Batch Ops" Style="{StaticResource OrbitAccentButtonStyle}" 
+                            HorizontalAlignment="Left" Padding="14,6" FontSize="12" Click="OnOpenBatchOperationsClicked"/>
+                </Grid>
+            </Border>
+
+            <!-- Card 3: Settings & Customization -->
+            <Border Grid.Column="2" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="8,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                        <Border Width="26" Height="26" CornerRadius="6" Background="#2C2F3E" Margin="0,0,10,0">
+                            <TextBlock Text="⚙" Foreground="{StaticResource OrbitAccentBrush}" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Settings &amp; Shortcuts" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Configure activation modifier (Shift/Ctrl/Alt), radial hotkeys, live menu preview &amp; scale slider." 
+                               Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+                    <Button x:Name="BtnLaunchSettings" Grid.Row="2" Content="Configure Settings" Style="{StaticResource OrbitSecondaryButtonStyle}" 
+                            HorizontalAlignment="Left" Padding="14,6" FontSize="12" Click="OnOpenSettingsClicked"/>
+                </Grid>
+            </Border>
+        </Grid>
+
         <!-- Main Body: Drop target and Capabilities test pad -->
-        <Grid Grid.Row="1" Margin="0,16,0,16">
+        <Grid Grid.Row="2" Margin="0,14,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1.2*"/>
                 <ColumnDefinition Width="0.8*"/>
@@ -61,7 +146,7 @@
             <Border Grid.Column="0" Margin="0,0,12,0" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="12" 
                     BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" AllowDrop="True"
                     Drop="OnDropFiles" DragOver="OnDragOverFiles">
-                <Grid Margin="24">
+                <Grid Margin="20">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -69,39 +154,45 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0">
-                        <TextBlock Text="Interactive Test Canvas" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Interactive Test Canvas" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="15" FontWeight="SemiBold"/>
                         <TextBlock Text="Drag and drop files here to inspect identified file identity and triggered Orbit radial capabilities." 
-                                   Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,2,0,12"/>
+                                   Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" Margin="0,2,0,10"/>
                     </StackPanel>
 
                     <!-- Drop Target Indicator -->
                     <Border Grid.Row="1" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="2" 
                             CornerRadius="10" Background="#12151E" VerticalAlignment="Stretch">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="✦" FontSize="36" Foreground="{StaticResource OrbitPrimaryBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Drop any file(s) here" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="15" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                            <TextBlock Text="✦" FontSize="32" Foreground="{StaticResource OrbitPrimaryBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Drop any file(s) here" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,6,0,0"/>
                             <TextBlock Text="Supports images, documents, archives, videos, audio, data &amp; code" 
                                        Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Drop Result Summary -->
-                    <TextBlock x:Name="TxtDropSummary" Grid.Row="2" Text="Awaiting file drop..." 
-                               Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                    <!-- Drop Result Summary & Workspace Action Shortcuts -->
+                    <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                        <TextBlock x:Name="TxtDropSummary" Text="Awaiting file drop..." 
+                                   Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" TextWrapping="Wrap"/>
+                        <StackPanel x:Name="DropActionButtons" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+                            <Button x:Name="BtnDroppedOpenAnnotator" Content="✎ Open in Annotator" Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,8,0" Click="OnDroppedOpenAnnotatorClicked"/>
+                            <Button x:Name="BtnDroppedOpenBatch" Content="⚡ Open in Batch Ops" Style="{StaticResource OrbitAccentButtonStyle}" Click="OnDroppedOpenBatchClicked"/>
+                        </StackPanel>
+                    </StackPanel>
                 </Grid>
             </Border>
 
             <!-- Capabilities & Registry Info Side Panel -->
-            <Border Grid.Column="1" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="12" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" Padding="20">
+            <Border Grid.Column="1" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="12" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" Padding="18">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                        <TextBlock Text="Registered Operations" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="16" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="TxtOperationsCount" Text="Loading engine registry..." Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" Margin="0,2,0,0"/>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="Registered Operations" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="15" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="TxtOperationsCount" Text="Loading engine registry..." Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" Margin="0,2,0,0"/>
                     </StackPanel>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -132,7 +223,7 @@
         </Grid>
 
         <!-- Footer / Gesture Tip -->
-        <Border Grid.Row="2" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="8" Padding="14,10" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
+        <Border Grid.Row="3" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="8" Padding="14,10" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

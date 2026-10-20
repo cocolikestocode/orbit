@@ -27,6 +27,7 @@ public class GlobalInputMonitor : IDisposable
     public event Action<char>? CategoryShortcutPressed;
 
     public int DragDistanceThreshold { get; set; } = 12;
+    public bool IsPaused { get; set; }
 
     public GlobalInputMonitor()
     {
@@ -78,7 +79,7 @@ public class GlobalInputMonitor : IDisposable
 
     private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0)
+        if (nCode >= 0 && !IsPaused)
         {
             var hookStruct = Marshal.PtrToStructure<Win32.MSLLHOOKSTRUCT>(lParam);
             var msg = wParam.ToInt32();
@@ -138,7 +139,7 @@ public class GlobalInputMonitor : IDisposable
 
     private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0)
+        if (nCode >= 0 && !IsPaused)
         {
             var hookStruct = Marshal.PtrToStructure<Win32.KBDLLHOOKSTRUCT>(lParam);
             var msg = wParam.ToInt32();
