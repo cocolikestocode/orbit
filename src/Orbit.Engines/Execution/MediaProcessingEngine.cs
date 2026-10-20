@@ -259,6 +259,51 @@ public class MediaProcessingEngine : IProcessingEngine
                         break;
                     }
 
+                    case "media-compress-video":
+                    {
+                        var outPath = Path.Combine(dir, $"{baseName}_compressed.mp4");
+                        var args = $"-y -i \"{file.FilePath}\" -c:v libx264 -crf 28 -preset medium -c:a aac -b:a 128k \"{outPath}\"";
+                        await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
+                        outputFiles.Add(outPath);
+                        break;
+                    }
+
+                    case "media-compress-audio":
+                    {
+                        var outPath = Path.Combine(dir, $"{baseName}_compressed.mp3");
+                        var args = $"-y -i \"{file.FilePath}\" -c:a libmp3lame -b:a 128k \"{outPath}\"";
+                        await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
+                        outputFiles.Add(outPath);
+                        break;
+                    }
+
+                    case "media-mute-audio":
+                    {
+                        var outPath = Path.Combine(dir, $"{baseName}_muted{file.Extension}");
+                        var args = $"-y -i \"{file.FilePath}\" -c:v copy -an \"{outPath}\"";
+                        await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
+                        outputFiles.Add(outPath);
+                        break;
+                    }
+
+                    case "media-adjust-volume":
+                    {
+                        var outPath = Path.Combine(dir, $"{baseName}_boosted{file.Extension}");
+                        var args = $"-y -i \"{file.FilePath}\" -filter:a \"volume=1.5\" -c:v copy \"{outPath}\"";
+                        await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
+                        outputFiles.Add(outPath);
+                        break;
+                    }
+
+                    case "media-resize-resolution":
+                    {
+                        var outPath = Path.Combine(dir, $"{baseName}_720p{file.Extension}");
+                        var args = $"-y -i \"{file.FilePath}\" -vf \"scale=-2:720\" -c:v libx264 -crf 23 -c:a copy \"{outPath}\"";
+                        await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
+                        outputFiles.Add(outPath);
+                        break;
+                    }
+
                     case "media-analyze-info":
                     case "media-inspect-streams":
                     {

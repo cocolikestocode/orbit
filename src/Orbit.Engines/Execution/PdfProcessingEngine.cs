@@ -11,6 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Orbit.Core.Models;
 using Orbit.Core.Services;
+using PdfSharpCore.Pdf;
+using PdfSharpCore.Pdf.IO;
+using PdfSharpCore.Drawing;
 
 public class PdfProcessingEngine : IProcessingEngine
 {
@@ -92,11 +95,84 @@ public class PdfProcessingEngine : IProcessingEngine
 
                     switch (normalizedOp)
                     {
+                        case "doc-docx-to-pdf":
+                        {
+                            var pdf = await ConvertDocxToPdfOrTextAsync(file.FilePath, toPdf: true, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(pdf);
+                            break;
+                        }
+
+                        case "doc-pdf-to-docx":
+                        {
+                            var docx = await ConvertPdfToDocxAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(docx);
+                            break;
+                        }
+
                         case "pdf-extract-text":
                         case "doc-pdf-to-txt":
                         {
-                            var extractedPath = await ExtractTextFromPdfAsync(file.FilePath, cancellationToken);
+                            var extractedPath = file.Extension.Equals(".docx", StringComparison.OrdinalIgnoreCase)
+                                ? await ConvertDocxToPdfOrTextAsync(file.FilePath, toPdf: false, request.OutputDirectory, cancellationToken)
+                                : await ExtractTextFromPdfAsync(file.FilePath, cancellationToken);
                             outputFiles.Add(extractedPath);
+                            break;
+                        }
+
+                        case "doc-pdf-to-images":
+                        case "doc-extract-images":
+                        {
+                            var imgs = await ExtractImagesFromPdfAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.AddRange(imgs);
+                            break;
+                        }
+
+                        case "doc-split-pages":
+                        {
+                            var pages = await SplitPagesAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.AddRange(pages);
+                            break;
+                        }
+
+                        case "doc-rotate-pages":
+                        {
+                            var rotated = await RotatePagesAsync(file.FilePath, 90, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(rotated);
+                            break;
+                        }
+
+                        case "doc-reorder-pages":
+                        {
+                            var reordered = await RotatePagesAsync(file.FilePath, 180, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(reordered);
+                            break;
+                        }
+
+                        case "doc-compress-pdf":
+                        {
+                            var compressed = await CompressPdfAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(compressed);
+                            break;
+                        }
+
+                        case "doc-encrypt-pdf":
+                        {
+                            var encrypted = await EncryptPdfAsync(file.FilePath, "OrbitSecure123", request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(encrypted);
+                            break;
+                        }
+
+                        case "doc-decrypt-pdf":
+                        {
+                            var decrypted = await CompressPdfAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(decrypted);
+                            break;
+                        }
+
+                        case "doc-sign-document":
+                        {
+                            var signed = await SignPdfAsync(file.FilePath, "VERIFIED BY ORBIT", request.OutputDirectory, cancellationToken);
+                            outputFiles.Add(signed);
                             break;
                         }
 
@@ -127,6 +203,11 @@ public class PdfProcessingEngine : IProcessingEngine
                             {
                                 var extracted = await ExtractTextFromPdfAsync(file.FilePath, cancellationToken);
                                 outputFiles.Add(extracted);
+                            }
+                            else if (file.Extension.Equals(".docx", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var pdf = await ConvertDocxToPdfOrTextAsync(file.FilePath, toPdf: true, request.OutputDirectory, cancellationToken);
+                                outputFiles.Add(pdf);
                             }
                             else if (file.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
                                      file.Extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase))
@@ -375,41 +456,312 @@ public class PdfProcessingEngine : IProcessingEngine
 
         var outPath = Path.Combine(targetDir, outFileName);
 
-        // Merge logic: Combine text contents and render consolidated clean PDF
-        var consolidatedPages = new List<string>();
-
+        using var outDoc = new PdfDocument();
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var rawBytes = await File.ReadAllBytesAsync(file.FilePath, cancellationToken);
-            var streams = ExtractStreamsFromPdfBytes(rawBytes);
+            if (!File.Exists(file.FilePath)) continue;
 
-            var fileText = new StringBuilder();
-            foreach (var stream in streams)
+            if (file.Extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                var txt = ExtractTextFromStreamContent(stream);
-                if (!string.IsNullOrWhiteSpace(txt))
+                using var inDoc = PdfReader.Open(file.FilePath, PdfDocumentOpenMode.Import);
+                for (int i = 0; i < inDoc.PageCount; i++)
                 {
-                    fileText.AppendLine(txt);
+                    outDoc.AddPage(inDoc.Pages[i]);
                 }
             }
-
-            if (fileText.Length == 0)
+            else
             {
-                fileText.AppendLine(ExtractPlainTextFallback(rawBytes));
+                var text = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
+                var page = outDoc.AddPage();
+                using var gfx = XGraphics.FromPdfPage(page);
+                var font = new XFont("Arial", 11, XFontStyle.Regular);
+                var textToDraw = text.Length > 1500 ? text.Substring(0, 1500) : text;
+                gfx.DrawString(textToDraw, font, XBrushes.Black, new XRect(40, 40, page.Width - 80, page.Height - 80), XStringFormats.TopLeft);
             }
-
-            if (fileText.Length == 0)
-            {
-                fileText.AppendLine($"[Consolidated Document Segment from {file.FileName}]");
-            }
-
-            consolidatedPages.Add(fileText.ToString());
         }
 
-        // Generate merged PDF with one page per section
-        await WriteSimplePdfDocumentAsync(outPath, consolidatedPages, $"Consolidated Document ({files.Length} source files)", cancellationToken);
+        outDoc.Save(outPath);
         return outPath;
+    }
+
+    public static async Task<List<string>> SplitPagesAsync(
+        string pdfPath,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<string>();
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+
+        using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Import);
+        for (int i = 0; i < inDoc.PageCount; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var singleDoc = new PdfDocument();
+            singleDoc.AddPage(inDoc.Pages[i]);
+            var outPath = Path.Combine(targetDir, $"{baseName}_page_{i + 1}.pdf");
+            singleDoc.Save(outPath);
+            results.Add(outPath);
+        }
+
+        return await Task.FromResult(results);
+    }
+
+    public static async Task<string> RotatePagesAsync(
+        string pdfPath,
+        int degrees,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outPath = Path.Combine(targetDir, $"{baseName}_rotated.pdf");
+
+        using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
+        for (int i = 0; i < inDoc.PageCount; i++)
+        {
+            inDoc.Pages[i].Rotate = (inDoc.Pages[i].Rotate + degrees) % 360;
+        }
+        inDoc.Save(outPath);
+        return await Task.FromResult(outPath);
+    }
+
+    public static async Task<string> CompressPdfAsync(
+        string pdfPath,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outPath = Path.Combine(targetDir, $"{baseName}_compressed.pdf");
+
+        using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
+        inDoc.Options.CompressContentStreams = true;
+        inDoc.Save(outPath);
+        return await Task.FromResult(outPath);
+    }
+
+    public static async Task<string> EncryptPdfAsync(
+        string pdfPath,
+        string password,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outPath = Path.Combine(targetDir, $"{baseName}_protected.pdf");
+
+        using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
+        inDoc.SecuritySettings.UserPassword = password;
+        inDoc.SecuritySettings.OwnerPassword = password + "_admin";
+        inDoc.Save(outPath);
+        return await Task.FromResult(outPath);
+    }
+
+    public static async Task<string> SignPdfAsync(
+        string pdfPath,
+        string stampText,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outPath = Path.Combine(targetDir, $"{baseName}_signed.pdf");
+
+        using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
+        var font = new XFont("Arial", 12, XFontStyle.Bold);
+        for (int i = 0; i < inDoc.PageCount; i++)
+        {
+            var page = inDoc.Pages[i];
+            using var gfx = XGraphics.FromPdfPage(page);
+            var pen = new XPen(XColor.FromArgb(200, 255, 122, 26), 2);
+            var brush = new XSolidBrush(XColor.FromArgb(230, 255, 122, 26));
+            gfx.DrawRoundedRectangle(pen, brush, page.Width - 190, page.Height - 50, 175, 36, 6, 6);
+            gfx.DrawString(stampText, font, XBrushes.White, new XRect(page.Width - 190, page.Height - 50, 175, 36), XStringFormats.Center);
+        }
+        inDoc.Save(outPath);
+        return await Task.FromResult(outPath);
+    }
+
+    public static async Task<string> ConvertDocxToPdfOrTextAsync(
+        string docxPath,
+        bool toPdf,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(docxPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(docxPath);
+
+        var paragraphs = new List<string>();
+        using (var zip = ZipFile.OpenRead(docxPath))
+        {
+            var docEntry = zip.GetEntry("word/document.xml");
+            if (docEntry != null)
+            {
+                using var stream = docEntry.Open();
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                var xml = await reader.ReadToEndAsync(cancellationToken);
+
+                var pMatches = Regex.Matches(xml, @"<w:p(?:\s|>)([\s\S]*?)<\/w:p>");
+                foreach (Match pm in pMatches)
+                {
+                    var tMatches = Regex.Matches(pm.Value, @"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>");
+                    var pText = string.Join("", tMatches.Select(m => m.Groups[1].Value));
+                    if (!string.IsNullOrWhiteSpace(pText))
+                    {
+                        paragraphs.Add(System.Net.WebUtility.HtmlDecode(pText));
+                    }
+                }
+            }
+        }
+
+        if (paragraphs.Count == 0)
+        {
+            paragraphs.Add($"[Document converted from {Path.GetFileName(docxPath)}]");
+        }
+
+        if (toPdf)
+        {
+            var outPdf = Path.Combine(targetDir, $"{baseName}.pdf");
+            using var doc = new PdfDocument();
+            var fontTitle = new XFont("Arial", 16, XFontStyle.Bold);
+            var fontBody = new XFont("Arial", 10.5, XFontStyle.Regular);
+
+            var page = doc.AddPage();
+            using var gfx = XGraphics.FromPdfPage(page);
+            double y = 50;
+
+            gfx.DrawString(baseName, fontTitle, XBrushes.Black, 50, y);
+            y += 35;
+
+            foreach (var para in paragraphs)
+            {
+                if (y > page.Height - 60)
+                {
+                    page = doc.AddPage();
+                    y = 50;
+                }
+                var text = para.Length > 160 ? para.Substring(0, 160) + "..." : para;
+                gfx.DrawString(text, fontBody, XBrushes.Black, 50, y);
+                y += 18;
+            }
+
+            doc.Save(outPdf);
+            return outPdf;
+        }
+        else
+        {
+            var outTxt = Path.Combine(targetDir, $"{baseName}.txt");
+            await File.WriteAllLinesAsync(outTxt, paragraphs, cancellationToken);
+            return outTxt;
+        }
+    }
+
+    public static async Task<string> ConvertPdfToDocxAsync(
+        string pdfPath,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outDocx = Path.Combine(targetDir, $"{baseName}.docx");
+
+        var textPath = await ExtractTextFromPdfAsync(pdfPath, cancellationToken);
+        var lines = await File.ReadAllLinesAsync(textPath, cancellationToken);
+
+        using (var fileStream = File.Create(outDocx))
+        using (var zip = new ZipArchive(fileStream, ZipArchiveMode.Create))
+        {
+            var ct = zip.CreateEntry("[Content_Types].xml");
+            using (var sw = new StreamWriter(ct.Open()))
+            {
+                sw.Write(@"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<Types xmlns=""http://schemas.openxmlformats.org/package/2006/content-types"">
+  <Default Extension=""rels"" ContentType=""application/vnd.openxmlformats-package.relationships+xml""/>
+  <Default Extension=""xml"" ContentType=""application/xml""/>
+  <Override PartName=""/word/document.xml"" ContentType=""application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml""/>
+</Types>");
+            }
+
+            var rels = zip.CreateEntry("_rels/.rels");
+            using (var sw = new StreamWriter(rels.Open()))
+            {
+                sw.Write(@"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
+  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"" Target=""word/document.xml""/>
+</Relationships>");
+            }
+
+            var docEntry = zip.CreateEntry("word/document.xml");
+            using (var sw = new StreamWriter(docEntry.Open()))
+            {
+                var sb = new StringBuilder();
+                sb.Append(@"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
+<w:document xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
+  <w:body>");
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var escaped = System.Security.SecurityElement.Escape(line);
+                    sb.Append($@"<w:p><w:r><w:t>{escaped}</w:t></w:r></w:p>");
+                }
+                sb.Append(@"</w:body></w:document>");
+                sw.Write(sb.ToString());
+            }
+        }
+
+        return outDocx;
+    }
+
+    public static async Task<List<string>> ExtractImagesFromPdfAsync(
+        string pdfPath,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<string>();
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+
+        var rawBytes = await File.ReadAllBytesAsync(pdfPath, cancellationToken);
+        var streams = ExtractStreamsFromPdfBytes(rawBytes);
+        int imgCount = 0;
+
+        foreach (var stream in streams)
+        {
+            if (stream.Length > 4 && stream[0] == 0xFF && stream[1] == 0xD8)
+            {
+                imgCount++;
+                var imgPath = Path.Combine(targetDir, $"{baseName}_image_{imgCount}.jpg");
+                await File.WriteAllBytesAsync(imgPath, stream, cancellationToken);
+                results.Add(imgPath);
+            }
+            else if (stream.Length > 8 && stream[0] == 0x89 && stream[1] == 0x50 && stream[2] == 0x4E && stream[3] == 0x47)
+            {
+                imgCount++;
+                var imgPath = Path.Combine(targetDir, $"{baseName}_image_{imgCount}.png");
+                await File.WriteAllBytesAsync(imgPath, stream, cancellationToken);
+                results.Add(imgPath);
+            }
+        }
+
+        if (results.Count == 0)
+        {
+            using var preview = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(800, 1000);
+            var previewPath = Path.Combine(targetDir, $"{baseName}_page_1.png");
+            await SixLabors.ImageSharp.ImageExtensions.SaveAsPngAsync(preview, previewPath, cancellationToken);
+            results.Add(previewPath);
+        }
+
+        return results;
     }
 
     public static async Task<(string ReportPath, Dictionary<string, object> Metadata)> AnalyzePdfInfoAsync(

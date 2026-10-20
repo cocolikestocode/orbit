@@ -184,9 +184,10 @@ public class JobManager : IJobManager
 
         if (operationId.StartsWith("text-", StringComparison.OrdinalIgnoreCase) ||
             operationId.StartsWith("data-", StringComparison.OrdinalIgnoreCase) ||
-            operationId.StartsWith("code-", StringComparison.OrdinalIgnoreCase))
+            operationId.StartsWith("code-", StringComparison.OrdinalIgnoreCase) ||
+            operationId.StartsWith("file-", StringComparison.OrdinalIgnoreCase))
         {
-            var textEngine = _engines.FirstOrDefault(e => e.EngineId.Equals("text", StringComparison.OrdinalIgnoreCase));
+            var textEngine = _engines.FirstOrDefault(e => e.EngineId is "text" or "textdata");
             if (textEngine != null) return textEngine;
         }
 
@@ -200,7 +201,7 @@ public class JobManager : IJobManager
                 FileFamily.Document => _engines.FirstOrDefault(e => e.EngineId is "document" or "pdf"),
                 FileFamily.Video or FileFamily.Audio => _engines.FirstOrDefault(e => e.EngineId.Equals("media", StringComparison.OrdinalIgnoreCase)),
                 FileFamily.Archive => _engines.FirstOrDefault(e => e.EngineId.Equals("archive", StringComparison.OrdinalIgnoreCase)),
-                FileFamily.Text or FileFamily.Code or FileFamily.Data => _engines.FirstOrDefault(e => e.EngineId.Equals("text", StringComparison.OrdinalIgnoreCase)),
+                FileFamily.Text or FileFamily.Code or FileFamily.Data => _engines.FirstOrDefault(e => e.EngineId is "text" or "textdata"),
                 _ => null
             };
 

@@ -8,8 +8,13 @@
         Background="{StaticResource OrbitBackgroundBrush}">
 
     <Window.Resources>
-        <!-- Tool Button Style -->
-        <Style x:Key="ToolButtonStyle" TargetType="Button">
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orbit.App;component/Themes/DarkTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Tool Button Style -->
+            <Style x:Key="ToolButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource OrbitTextPrimaryBrush}" />
             <Setter Property="BorderBrush" Value="Transparent" />
@@ -73,6 +78,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Grid>
@@ -134,7 +140,6 @@
 
                     <ComboBox x:Name="CmbZoom" Width="82" Height="32" Margin="4,0"
                               Style="{StaticResource OrbitComboBoxStyle}"
-                              SelectionChanged="OnZoomSelectionChanged"
                               VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
                         <ComboBoxItem Content="Fit" />
                         <ComboBoxItem Content="50%" />

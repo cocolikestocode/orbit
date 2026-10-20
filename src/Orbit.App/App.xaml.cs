@@ -159,6 +159,7 @@ public partial class App : Application
     private async void OnOperationSelected(OperationDefinition operation, FileIdentity[] files)
     {
         if (_serviceProvider == null) return;
+        files ??= Array.Empty<FileIdentity>();
 
         bool isImageWorkspace = 
             operation.Category == OperationCategory.Annotate || 
@@ -185,7 +186,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open Annotator: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Could not open Annotator: {ex.Message}\n\n{ex.StackTrace}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             return;
         }
@@ -202,7 +203,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open Batch Operations: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Could not open Batch Operations: {ex.Message}\n\n{ex.StackTrace}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             return;
         }

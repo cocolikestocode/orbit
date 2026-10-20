@@ -1,0 +1,138 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Modern Dark Theme Palette for Orbit (Mockup-matched) -->
+    <SolidColorBrush x:Key="OrbitBackgroundBrush" Color="#181920" />
+    <SolidColorBrush x:Key="OrbitSurfaceBrush" Color="#232530" />
+    <SolidColorBrush x:Key="OrbitSurfaceHoverBrush" Color="#2C2F3E" />
+    <SolidColorBrush x:Key="OrbitSurfaceSelectedBrush" Color="#373B4D" />
+    <SolidColorBrush x:Key="OrbitPrimaryBrush" Color="#FF7A1A" />
+    <SolidColorBrush x:Key="OrbitAccentBrush" Color="#FF7A1A" />
+    <SolidColorBrush x:Key="OrbitAccentHoverBrush" Color="#FF913D" />
+    <SolidColorBrush x:Key="OrbitAccentPressedBrush" Color="#E06509" />
+    <SolidColorBrush x:Key="OrbitAccentSubtleBrush" Color="#28FF7A1A" />
+    <SolidColorBrush x:Key="OrbitTextPrimaryBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="OrbitTextSecondaryBrush" Color="#94A3B8" />
+    <SolidColorBrush x:Key="OrbitTextMutedBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="OrbitBorderBrush" Color="#353745" />
+    <SolidColorBrush x:Key="OrbitBorderLightBrush" Color="#454A5C" />
+    <SolidColorBrush x:Key="OrbitSuccessBrush" Color="#10B981" />
+    <SolidColorBrush x:Key="OrbitDangerBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="OrbitWarningBrush" Color="#F59E0B" />
+
+    <!-- Accent Action Button Style -->
+    <Style x:Key="OrbitAccentButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource OrbitAccentBrush}" />
+        <Setter Property="Foreground" Value="#FFFFFF" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Border" 
+                            Background="{TemplateBinding Background}" 
+                            CornerRadius="8" 
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource OrbitAccentHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{StaticResource OrbitAccentPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="Opacity" Value="0.4" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Secondary Dark Button Style -->
+    <Style x:Key="OrbitSecondaryButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource OrbitSurfaceHoverBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource OrbitTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OrbitBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8" 
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="#373B4D" />
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource OrbitBorderLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="#252733" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="Opacity" Value="0.4" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Dark TextBox Style -->
+    <Style x:Key="OrbitTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Background" Value="#15161C" />
+        <Setter Property="Foreground" Value="{StaticResource OrbitTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OrbitBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{StaticResource OrbitAccentBrush}" />
+        <Setter Property="SelectionBrush" Value="{StaticResource OrbitAccentBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Border" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}" 
+                            CornerRadius="6">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource OrbitBorderLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource OrbitAccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Dark ComboBox Style -->
+    <Style x:Key="OrbitComboBoxStyle" TargetType="ComboBox">
+        <Setter Property="Background" Value="#15161C" />
+        <Setter Property="Foreground" Value="{StaticResource OrbitTextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource OrbitBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+</ResourceDictionary>

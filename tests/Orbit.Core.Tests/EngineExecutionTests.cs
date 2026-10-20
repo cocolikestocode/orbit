@@ -213,6 +213,106 @@ public class EngineExecutionTests : IDisposable
         File.Exists(outPath).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task TextDataProcessingEngine_ShouldConvertJsonToCsvAndBack()
+    {
+        var jsonPath = Path.Combine(_tempDir, "data.json");
+        var jsonContent = @"[
+  { ""id"": 1, ""name"": ""Alpha"", ""role"": ""Developer"" },
+  { ""id"": 2, ""name"": ""Beta"", ""role"": ""Designer"" }
+]";
+        await File.WriteAllTextAsync(jsonPath, jsonContent);
+
+        var fileIdentity = _identifier.Identify(jsonPath);
+        var req = new OperationRequest
+        {
+            OperationId = "data-json-to-csv",
+            InputFiles = new[] { fileIdentity }
+        };
+
+        var result = await _textEngine.ExecuteAsync(req, new Progress<OperationProgress>());
+        result.Success.Should().BeTrue();
+        result.OutputFiles.Should().NotBeEmpty();
+        var csvPath = result.OutputFiles![0];
+        Path.GetExtension(csvPath).Should().Be(".csv");
+        File.Exists(csvPath).Should().BeTrue();
+
+        var csvLines = await File.ReadAllLinesAsync(csvPath);
+        csvLines.Length.Should().Be(3); // header + 2 rows
+        csvLines[0].Should().Contain("name");
+
+        // Now test converting CSV to JSON
+        var csvIdentity = _identifier.Identify(csvPath);
+        var reqBack = new OperationRequest
+        {
+            OperationId = "data-csv-to-json",
+            InputFiles = new[] { csvIdentity }
+        };
+        var resultBack = await _textEngine.ExecuteAsync(reqBack, new Progress<OperationProgress>());
+        resultBack.Success.Should().BeTrue();
+        var backJsonPath = resultBack.OutputFiles![0];
+        Path.GetExtension(backJsonPath).Should().Be(".json");
+        File.Exists(backJsonPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PdfProcessingEngine_ShouldSplitAndRotatePdfWithoutProducingTxt()
+    {
+        var pdfEngine = new PdfProcessingEngine();
+
+        // 1. Create a 2-page test PDF with PdfSharpCore
+        var testPdfPath = Path.Combine(_tempDir, "sample_document.pdf");
+        using (var doc = new PdfSharpCore.Pdf.PdfDocument())
+        {
+            var p1 = doc.AddPage();
+            using (var gfx1 = PdfSharpCore.Drawing.XGraphics.FromPdfPage(p1))
+            {
+                var font = new PdfSharpCore.Drawing.XFont("Arial", 12, PdfSharpCore.Drawing.XFontStyle.Regular);
+                gfx1.DrawString("Page 1 Content", font, PdfSharpCore.Drawing.XBrushes.Black, 50, 50);
+            }
+
+            var p2 = doc.AddPage();
+            using (var gfx2 = PdfSharpCore.Drawing.XGraphics.FromPdfPage(p2))
+            {
+                var font = new PdfSharpCore.Drawing.XFont("Arial", 12, PdfSharpCore.Drawing.XFontStyle.Regular);
+                gfx2.DrawString("Page 2 Content", font, PdfSharpCore.Drawing.XBrushes.Black, 50, 50);
+            }
+
+            doc.Save(testPdfPath);
+        }
+
+        var identity = _identifier.Identify(testPdfPath);
+
+        // 2. Test split pages
+        var splitReq = new OperationRequest
+        {
+            OperationId = "doc-split-pages",
+            InputFiles = new[] { identity }
+        };
+        var splitResult = await pdfEngine.ExecuteAsync(splitReq, new Progress<OperationProgress>());
+        splitResult.Success.Should().BeTrue();
+        splitResult.OutputFiles.Length.Should().Be(2);
+        foreach (var file in splitResult.OutputFiles)
+        {
+            Path.GetExtension(file).Should().Be(".pdf");
+            Path.GetExtension(file).Should().NotBe(".txt");
+            File.Exists(file).Should().BeTrue();
+        }
+
+        // 3. Test rotate pages
+        var rotateReq = new OperationRequest
+        {
+            OperationId = "doc-rotate-pages",
+            InputFiles = new[] { identity }
+        };
+        var rotateResult = await pdfEngine.ExecuteAsync(rotateReq, new Progress<OperationProgress>());
+        rotateResult.Success.Should().BeTrue();
+        var rotatedPath = rotateResult.OutputFiles[0];
+        Path.GetExtension(rotatedPath).Should().Be(".pdf");
+        Path.GetExtension(rotatedPath).Should().NotBe(".txt");
+        File.Exists(rotatedPath).Should().BeTrue();
+    }
+
     public void Dispose()
     {
         try

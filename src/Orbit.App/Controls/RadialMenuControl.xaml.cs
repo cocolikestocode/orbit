@@ -226,8 +226,8 @@ public partial class RadialMenuControl : UserControl
         // Calculate polar angle: [0, 360)
         double angle = Math.Atan2(dy, dx) * 180.0 / Math.PI; // [-180, 180]
 
-        // Check Category Ring
-        if (distance >= CategoryInnerRadius && distance <= CategoryOuterRadius)
+        // Check Category Ring (from inner deadzone up to action ring start)
+        if (distance > InnerDeadZoneRadius && distance < ActionInnerRadius)
         {
             ClearActionHighlight();
             foreach (var visual in _categoryVisuals)
@@ -242,8 +242,8 @@ public partial class RadialMenuControl : UserControl
                 }
             }
         }
-        // Check Action Ring
-        else if (distance >= ActionInnerRadius && distance <= ActionOuterRadius)
+        // Check Action Ring (from ActionInnerRadius to outer boundary)
+        else if (distance >= ActionInnerRadius && distance <= 265)
         {
             bool foundAction = false;
             foreach (var visual in _actionVisuals)
@@ -339,13 +339,28 @@ public partial class RadialMenuControl : UserControl
         }
     }
 
+    private static double NormalizeAngle(double a)
+    {
+        a %= 360.0;
+        if (a < 0) a += 360.0;
+        return a;
+    }
+
     private static bool IsAngleBetween(double angle, double start, double end)
     {
-        double diff = (end - start + 360) % 360;
-        if (diff == 0) diff = 360; // full circle
+        double normAngle = NormalizeAngle(angle);
+        double normStart = NormalizeAngle(start);
+        double normEnd = NormalizeAngle(end);
 
-        double relative = (angle - start + 360) % 360;
-        return relative >= 0 && relative < diff;
+        if (normStart <= normEnd)
+        {
+            return normAngle >= normStart && normAngle < normEnd;
+        }
+        else
+        {
+            // Spans across 0° boundary (e.g. 330° to 30°)
+            return normAngle >= normStart || normAngle < normEnd;
+        }
     }
 
     private static Path CreateArcSector(double cx, double cy, double innerR, double outerR, double startAngle, double endAngle)

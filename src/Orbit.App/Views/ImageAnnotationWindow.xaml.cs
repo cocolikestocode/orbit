@@ -50,6 +50,10 @@ public partial class ImageAnnotationWindow : Window
         InitializeComponent();
         KeyDown += OnWindowKeyDown;
         UpdateToolSelection(AnnotationTool.Select);
+        if (CmbZoom != null)
+        {
+            CmbZoom.SelectionChanged += OnZoomSelectionChanged;
+        }
     }
 
     public void LoadImage(string imagePath)
@@ -83,6 +87,9 @@ public partial class ImageAnnotationWindow : Window
 
     private void ApplyBitmap(BitmapSource bitmap, string displayName)
     {
+        if (bitmap == null) return;
+        if (BaseImageElement == null || DrawingCanvas == null) return;
+
         BaseImageElement.Source = bitmap;
         DrawingCanvas.Width = bitmap.PixelWidth;
         DrawingCanvas.Height = bitmap.PixelHeight;
@@ -90,14 +97,14 @@ public partial class ImageAnnotationWindow : Window
         // Clear existing marks
         ClearCanvasAnnotations();
 
-        TxtImageMeta.Text = $"{displayName} • {bitmap.PixelWidth} × {bitmap.PixelHeight} px";
-        EmptyStatePrompt.Visibility = Visibility.Collapsed;
-        TxtStatusMessage.Text = $"Loaded {displayName}";
+        if (TxtImageMeta != null) TxtImageMeta.Text = $"{displayName} • {bitmap.PixelWidth} × {bitmap.PixelHeight} px";
+        if (EmptyStatePrompt != null) EmptyStatePrompt.Visibility = Visibility.Collapsed;
+        if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Loaded {displayName}";
 
         // Auto zoom to fit if large
         Dispatcher.BeginInvoke(() =>
         {
-            if (bitmap.PixelWidth > ActualWidth * 0.8 || bitmap.PixelHeight > ActualHeight * 0.8)
+            if (CanvasScaleTransform != null && (bitmap.PixelWidth > ActualWidth * 0.8 || bitmap.PixelHeight > ActualHeight * 0.8))
             {
                 ApplyZoomToFit();
             }
@@ -163,15 +170,15 @@ public partial class ImageAnnotationWindow : Window
         _currentTool = tool;
 
         // Reset tags on all tool buttons
-        BtnToolSelect.Tag = null;
-        BtnToolCrop.Tag = null;
-        BtnToolArrow.Tag = null;
-        BtnToolRectangle.Tag = null;
-        BtnToolCircle.Tag = null;
-        BtnToolText.Tag = null;
-        BtnToolBlur.Tag = null;
-        BtnToolHighlight.Tag = null;
-        BtnToolRedact.Tag = null;
+        if (BtnToolSelect != null) BtnToolSelect.Tag = null;
+        if (BtnToolCrop != null) BtnToolCrop.Tag = null;
+        if (BtnToolArrow != null) BtnToolArrow.Tag = null;
+        if (BtnToolRectangle != null) BtnToolRectangle.Tag = null;
+        if (BtnToolCircle != null) BtnToolCircle.Tag = null;
+        if (BtnToolText != null) BtnToolText.Tag = null;
+        if (BtnToolBlur != null) BtnToolBlur.Tag = null;
+        if (BtnToolHighlight != null) BtnToolHighlight.Tag = null;
+        if (BtnToolRedact != null) BtnToolRedact.Tag = null;
 
         // Set active tag
         var activeBtn = tool switch
@@ -187,21 +194,24 @@ public partial class ImageAnnotationWindow : Window
             AnnotationTool.Redact => BtnToolRedact,
             _ => BtnToolSelect
         };
-        activeBtn.Tag = "Active";
+        if (activeBtn != null) activeBtn.Tag = "Active";
 
-        TxtToolHint.Text = tool switch
+        if (TxtToolHint != null)
         {
-            AnnotationTool.Select => "Tool: Select (Click to select/drag annotations, Del to remove)",
-            AnnotationTool.Crop => "Tool: Crop (Drag marquee to crop image canvas)",
-            AnnotationTool.Arrow => "Tool: Arrow (Click & drag to draw directional arrowhead)",
-            AnnotationTool.Rectangle => "Tool: Rectangle (Click & drag to frame target area)",
-            AnnotationTool.Circle => "Tool: Circle (Click & drag to encircle key details)",
-            AnnotationTool.Text => "Tool: Text Callout (Click anywhere to place editable text)",
-            AnnotationTool.Blur => "Tool: Blur Sensitive Area (Drag box over credentials/faces)",
-            AnnotationTool.Highlight => "Tool: Highlight (Draw translucent highlighter strip)",
-            AnnotationTool.Redact => "Tool: Redact (Drag solid black bar over private info)",
-            _ => "Tool: Ready"
-        };
+            TxtToolHint.Text = tool switch
+            {
+                AnnotationTool.Select => "Tool: Select (Click to select/drag annotations, Del to remove)",
+                AnnotationTool.Crop => "Tool: Crop (Drag marquee to crop image canvas)",
+                AnnotationTool.Arrow => "Tool: Arrow (Click & drag to draw directional arrowhead)",
+                AnnotationTool.Rectangle => "Tool: Rectangle (Click & drag to frame target area)",
+                AnnotationTool.Circle => "Tool: Circle (Click & drag to encircle key details)",
+                AnnotationTool.Text => "Tool: Text Callout (Click anywhere to place editable text)",
+                AnnotationTool.Blur => "Tool: Blur Sensitive Area (Drag box over credentials/faces)",
+                AnnotationTool.Highlight => "Tool: Highlight (Draw translucent highlighter strip)",
+                AnnotationTool.Redact => "Tool: Redact (Drag solid black bar over private info)",
+                _ => "Tool: Ready"
+            };
+        }
     }
 
     private void OnColorSwatchClicked(object sender, RoutedEventArgs e)
@@ -734,8 +744,9 @@ public partial class ImageAnnotationWindow : Window
 
     private void OnZoomSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (CmbZoom == null || CanvasScaleTransform == null) return;
         if (CmbZoom.SelectedItem is not ComboBoxItem item) return;
-        var tag = item.Content.ToString();
+        var tag = item.Content?.ToString();
 
         if (tag == "Fit")
         {
@@ -749,6 +760,7 @@ public partial class ImageAnnotationWindow : Window
 
     private void SetZoom(double zoom)
     {
+        if (CanvasScaleTransform == null) return;
         zoom = Math.Clamp(zoom, 0.1, 5.0);
         CanvasScaleTransform.ScaleX = zoom;
         CanvasScaleTransform.ScaleY = zoom;
@@ -756,11 +768,11 @@ public partial class ImageAnnotationWindow : Window
 
     private void ApplyZoomToFit()
     {
-        if (BaseImageElement.Source == null) return;
+        if (BaseImageElement?.Source == null || ImageScrollViewer == null || DrawingCanvas == null) return;
         double viewW = ImageScrollViewer.ActualWidth - 64;
         double viewH = ImageScrollViewer.ActualHeight - 64;
 
-        if (viewW <= 0 || viewH <= 0) return;
+        if (viewW <= 0 || viewH <= 0 || DrawingCanvas.Width <= 0 || DrawingCanvas.Height <= 0) return;
 
         double scaleX = viewW / DrawingCanvas.Width;
         double scaleY = viewH / DrawingCanvas.Height;

@@ -6,11 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Orbit.Core\Orbit.Core.csproj" />
     <ProjectReference Include="..\..\src\Orbit.Engines\Orbit.Engines.csproj" />
+    <ProjectReference Include="..\..\src\Orbit.App\Orbit.App.csproj" />
   </ItemGroup>
 
   <ItemGroup>
