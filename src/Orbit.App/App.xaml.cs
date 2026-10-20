@@ -180,37 +180,9 @@ public partial class App : Application
                 {
                     annotator.LoadImage(files[0].FilePath);
 
-                    if (operation.Id == "image-crop")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Transform, ImageAnnotationWindow.AnnotationTool.Crop);
-                    }
-                    else if (operation.Id == "image-adjust")
+                    if (operation.Id == "image-editor" || operation.Category == OperationCategory.Edit)
                     {
                         annotator.SetMode(ImageAnnotationWindow.StudioMode.Adjust);
-                    }
-                    else if (operation.Id == "image-add-watermark")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Watermark);
-                    }
-                    else if (operation.Id == "image-annotate-freehand")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
-                    }
-                    else if (operation.Id == "image-annotate-arrow")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Arrow);
-                    }
-                    else if (operation.Id == "image-annotate-text")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Text);
-                    }
-                    else if (operation.Id == "image-blur-region")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Blur);
-                    }
-                    else if (operation.Id == "image-annotate-step")
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.StepBadge);
                     }
                     else
                     {

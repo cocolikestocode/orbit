@@ -2,6 +2,7 @@ namespace Orbit.App.Views;
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,8 +47,10 @@ public partial class ImageAnnotationWindow : Window
     private StudioMode _currentMode = StudioMode.Markup;
     private AnnotationTool _currentTool = AnnotationTool.Pen;
     private Color _currentColor = Color.FromRgb(0xEF, 0x44, 0x44); // Red default
-    private double _strokeThickness = 4.0;
+    private double _strokeThickness = 6.0;
+    private double _strokeOpacity = 1.0;
     private int _stepBadgeCounter = 1;
+    private bool _hasUnsavedChanges = false;
 
     private bool _isDrawing;
     private Point _startPoint;
@@ -58,7 +61,8 @@ public partial class ImageAnnotationWindow : Window
     private double _elementOriginalLeft;
     private double _elementOriginalTop;
 
-    // Watermark element tracking
+    // Watermark state (Disabled by default)
+    private bool _isWatermarkActive = false;
     private FrameworkElement? _activeWatermarkElement;
     private string? _watermarkLogoPath;
 
@@ -69,7 +73,10 @@ public partial class ImageAnnotationWindow : Window
     {
         InitializeComponent();
         KeyDown += OnWindowKeyDown;
+        Closing += OnWindowClosing;
         UpdateToolSelection(AnnotationTool.Pen);
+        UpdateStrokePreview();
+
         if (CmbZoom != null)
         {
             CmbZoom.SelectionChanged += OnZoomSelectionChanged;
@@ -93,6 +100,7 @@ public partial class ImageAnnotationWindow : Window
             _originalBitmap = bitmap;
             _baseTunedBitmap = bitmap;
             ApplyBitmap(bitmap, IOPath.GetFileName(imagePath));
+            SetDirty(false);
         }
         catch (Exception ex)
         {
@@ -107,6 +115,7 @@ public partial class ImageAnnotationWindow : Window
         _originalBitmap = bitmap;
         _baseTunedBitmap = bitmap;
         ApplyBitmap(bitmap, name ?? "Clipboard_Image");
+        SetDirty(false);
     }
 
     private void ApplyBitmap(BitmapSource bitmap, string displayName)
@@ -118,7 +127,6 @@ public partial class ImageAnnotationWindow : Window
         DrawingCanvas.Width = bitmap.PixelWidth;
         DrawingCanvas.Height = bitmap.PixelHeight;
 
-        // Clear existing marks
         ClearCanvasAnnotations();
 
         if (TxtImageMeta != null) TxtImageMeta.Text = $"{displayName} • {bitmap.PixelWidth} × {bitmap.PixelHeight} px";
@@ -160,8 +168,59 @@ public partial class ImageAnnotationWindow : Window
         _redoStack.Clear();
         _selectedElement = null;
         _stepBadgeCounter = 1;
+        if (TxtNextBadgeNumber != null) TxtNextBadgeNumber.Text = "Badge #1";
         UpdateUndoRedoState();
     }
+
+    #region Dirty / Saved State Tracking
+
+    private void SetDirty(bool dirty)
+    {
+        _hasUnsavedChanges = dirty;
+
+        if (BadgeSavedState != null) BadgeSavedState.Visibility = dirty ? Visibility.Collapsed : Visibility.Visible;
+        if (BadgeUnsavedState != null) BadgeUnsavedState.Visibility = dirty ? Visibility.Visible : Visibility.Collapsed;
+
+        if (BtnSaveQuick != null)
+        {
+            BtnSaveQuick.Content = dirty ? "💾 Save" : "Saved";
+            if (dirty)
+            {
+                BtnSaveQuick.Foreground = Brushes.White;
+                BtnSaveQuick.Background = (Brush)FindResource("OrbitAccentBrush");
+            }
+            else
+            {
+                BtnSaveQuick.Foreground = (Brush)FindResource("OrbitTextSecondaryBrush");
+                BtnSaveQuick.Background = (Brush)FindResource("OrbitSurfaceHoverBrush");
+            }
+        }
+
+        string fileName = IOPath.GetFileName(_currentImagePath ?? "New Image");
+        Title = $"Orbit — Image Studio • {(dirty ? "Unsaved Changes" : "Saved")} - {fileName}";
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (!_hasUnsavedChanges) return;
+
+        var result = MessageBox.Show(
+            "You have unsaved changes in this image. Do you want to save before closing?",
+            "Orbit Image Studio",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            OnQuickSaveClicked(this, new RoutedEventArgs());
+        }
+        else if (result == MessageBoxResult.Cancel)
+        {
+            e.Cancel = true;
+        }
+    }
+
+    #endregion
 
     #region Mode & Tool Selection
 
@@ -178,6 +237,11 @@ public partial class ImageAnnotationWindow : Window
         if (PnlAdjustments != null) PnlAdjustments.Visibility = (mode == StudioMode.Adjust) ? Visibility.Visible : Visibility.Collapsed;
         if (PnlWatermark != null) PnlWatermark.Visibility = (mode == StudioMode.Watermark) ? Visibility.Visible : Visibility.Collapsed;
         if (PnlTransform != null) PnlTransform.Visibility = (mode == StudioMode.Transform) ? Visibility.Visible : Visibility.Collapsed;
+
+        if (ColLeftToolbar != null)
+        {
+            ColLeftToolbar.Width = (mode == StudioMode.Markup) ? new GridLength(60) : new GridLength(0);
+        }
 
         if (initialTool.HasValue)
         {
@@ -213,9 +277,6 @@ public partial class ImageAnnotationWindow : Window
         else if (btn == BtnModeTransform) SetMode(StudioMode.Transform);
     }
 
-    private void OnGoToWatermarkClicked(object sender, RoutedEventArgs e) => SetMode(StudioMode.Watermark);
-    private void OnGoToAdjustClicked(object sender, RoutedEventArgs e) => SetMode(StudioMode.Adjust);
-
     private void OnToolSelected(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn) return;
@@ -227,14 +288,14 @@ public partial class ImageAnnotationWindow : Window
         else if (btn == BtnToolCircle) SetTool(AnnotationTool.Circle);
         else if (btn == BtnToolText) SetTool(AnnotationTool.Text);
         else if (btn == BtnToolStepBadge) SetTool(AnnotationTool.StepBadge);
-        else if (btn == BtnToolBlur) SetTool(AnnotationTool.Blur);
         else if (btn == BtnToolHighlight) SetTool(AnnotationTool.Highlight);
+        else if (btn == BtnToolBlur) SetTool(AnnotationTool.Blur);
         else if (btn == BtnToolRedact) SetTool(AnnotationTool.Redact);
     }
 
     private void UpdateToolSelection(AnnotationTool tool)
     {
-        Button[] tools = [BtnToolSelect, BtnToolPen, BtnToolArrow, BtnToolRectangle, BtnToolCircle, BtnToolText, BtnToolStepBadge, BtnToolBlur, BtnToolHighlight, BtnToolRedact];
+        Button[] tools = [BtnToolSelect, BtnToolPen, BtnToolArrow, BtnToolRectangle, BtnToolCircle, BtnToolText, BtnToolStepBadge, BtnToolHighlight, BtnToolBlur, BtnToolRedact];
         foreach (var t in tools)
         {
             if (t != null) t.Tag = null;
@@ -249,8 +310,8 @@ public partial class ImageAnnotationWindow : Window
             AnnotationTool.Circle => BtnToolCircle,
             AnnotationTool.Text => BtnToolText,
             AnnotationTool.StepBadge => BtnToolStepBadge,
-            AnnotationTool.Blur => BtnToolBlur,
             AnnotationTool.Highlight => BtnToolHighlight,
+            AnnotationTool.Blur => BtnToolBlur,
             AnnotationTool.Redact => BtnToolRedact,
             _ => null
         };
@@ -269,6 +330,34 @@ public partial class ImageAnnotationWindow : Window
             };
         }
 
+        // Update Right Inspector Context
+        if (TxtInspectorHeader != null)
+        {
+            TxtInspectorHeader.Text = tool switch
+            {
+                AnnotationTool.Pen => "PEN & BRUSH PROPERTIES",
+                AnnotationTool.Arrow => "ARROW PROPERTIES",
+                AnnotationTool.Rectangle => "RECTANGLE PROPERTIES",
+                AnnotationTool.Circle => "CIRCLE PROPERTIES",
+                AnnotationTool.Text => "TEXT CALLOUT PROPERTIES",
+                AnnotationTool.StepBadge => "NUMBERED STEP BADGES",
+                AnnotationTool.Highlight => "HIGHLIGHTER PROPERTIES",
+                AnnotationTool.Blur => "BLUR REDACTION PROPERTIES",
+                AnnotationTool.Redact => "BLACKOUT PRIVACY PROPERTIES",
+                _ => "ELEMENT PROPERTIES"
+            };
+        }
+
+        if (SecStepBadgeOptions != null)
+        {
+            SecStepBadgeOptions.Visibility = (tool == AnnotationTool.StepBadge) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (SecThicknessSlider != null)
+        {
+            SecThicknessSlider.Visibility = (tool == AnnotationTool.StepBadge) ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         string hint = tool switch
         {
             AnnotationTool.Select => "Tool: Select (Click to move/resize annotations)",
@@ -278,22 +367,45 @@ public partial class ImageAnnotationWindow : Window
             AnnotationTool.Circle => "Tool: Circle (Drag ellipse shape)",
             AnnotationTool.Text => "Tool: Text (Click to place text label)",
             AnnotationTool.StepBadge => $"Tool: Step Marker (Click to place badge #{_stepBadgeCounter})",
-            AnnotationTool.Blur => "Tool: Blur (Drag over sensitive details)",
             AnnotationTool.Highlight => "Tool: Highlighter (Drag translucent highlight)",
+            AnnotationTool.Blur => "Tool: Blur (Drag over sensitive details)",
             AnnotationTool.Redact => "Tool: Redact (Drag solid blackout privacy bar)",
             AnnotationTool.Crop => "Tool: Crop (Drag bounding box to crop)",
             _ => "Tool: Active"
         };
 
         if (TxtToolHint != null) TxtToolHint.Text = hint;
-        if (TxtActiveToolName != null) TxtActiveToolName.Text = hint.Replace("Tool: ", "");
+    }
+
+    private void OnThicknessSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _strokeThickness = SliderThickness?.Value ?? 6.0;
+        if (TxtValThickness != null) TxtValThickness.Text = $"{(int)_strokeThickness} px";
+        UpdateStrokePreview();
+    }
+
+    private void OnOpacitySliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _strokeOpacity = (SliderOpacity?.Value ?? 100.0) / 100.0;
+        if (TxtValOpacity != null) TxtValOpacity.Text = $"{(int)(_strokeOpacity * 100)}%";
+        UpdateStrokePreview();
+    }
+
+    private void UpdateStrokePreview()
+    {
+        if (EllipseStrokePreview == null) return;
+        double diameter = Math.Max(2, Math.Min(40, _strokeThickness));
+        EllipseStrokePreview.Width = diameter;
+        EllipseStrokePreview.Height = diameter;
+        var col = Color.FromArgb((byte)(255 * _strokeOpacity), _currentColor.R, _currentColor.G, _currentColor.B);
+        EllipseStrokePreview.Fill = new SolidColorBrush(col);
     }
 
     private void OnColorSwatchClicked(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn) return;
 
-        Button[] swatches = [SwatchRed, SwatchOrange, SwatchYellow, SwatchGreen, SwatchCyan, SwatchWhite, SwatchBlack];
+        Button[] swatches = [SwatchRed, SwatchCoral, SwatchOrange, SwatchAmber, SwatchLime, SwatchGreen, SwatchCyan, SwatchBlue, SwatchPurple, SwatchPink, SwatchWhite, SwatchBlack];
         foreach (var s in swatches)
         {
             if (s != null) s.Tag = null;
@@ -304,24 +416,14 @@ public partial class ImageAnnotationWindow : Window
         if (btn.Background is SolidColorBrush scb)
         {
             _currentColor = scb.Color;
+            UpdateStrokePreview();
         }
     }
 
-    private void OnStrokeWidthCycleClicked(object sender, RoutedEventArgs e)
+    private void OnResetBadgeCounterClicked(object sender, RoutedEventArgs e)
     {
-        _strokeThickness = _strokeThickness switch
-        {
-            2.0 => 4.0,
-            4.0 => 8.0,
-            8.0 => 12.0,
-            12.0 => 16.0,
-            _ => 2.0
-        };
-
-        if (BtnStrokeWidth != null)
-        {
-            BtnStrokeWidth.Content = $"{(int)_strokeThickness}px";
-        }
+        _stepBadgeCounter = 1;
+        if (TxtNextBadgeNumber != null) TxtNextBadgeNumber.Text = "Badge #1";
     }
 
     #endregion
@@ -361,7 +463,6 @@ public partial class ImageAnnotationWindow : Window
             return;
         }
 
-        // Shape / Pen / Crop drawing start
         _isDrawing = true;
         _startPoint = pos;
         _currentVisual = CreateDrawingVisual(_currentTool, _startPoint);
@@ -383,6 +484,7 @@ public partial class ImageAnnotationWindow : Window
             double dy = cur.Y - _elementDragStart.Y;
             Canvas.SetLeft(_selectedElement, _elementOriginalLeft + dx);
             Canvas.SetTop(_selectedElement, _elementOriginalTop + dy);
+            SetDirty(true);
             return;
         }
 
@@ -424,6 +526,7 @@ public partial class ImageAnnotationWindow : Window
                 _redoStack.Clear();
                 UpdateUndoRedoState();
                 SelectElement(poly);
+                SetDirty(true);
             }
             else
             {
@@ -443,6 +546,7 @@ public partial class ImageAnnotationWindow : Window
                 _redoStack.Clear();
                 UpdateUndoRedoState();
                 SelectElement(_currentVisual);
+                SetDirty(true);
             }
         }
         else
@@ -455,7 +559,8 @@ public partial class ImageAnnotationWindow : Window
 
     private FrameworkElement? CreateDrawingVisual(AnnotationTool tool, Point start)
     {
-        var brush = new SolidColorBrush(_currentColor);
+        var effectiveColor = Color.FromArgb((byte)(255 * _strokeOpacity), _currentColor.R, _currentColor.G, _currentColor.B);
+        var brush = new SolidColorBrush(effectiveColor);
 
         switch (tool)
         {
@@ -517,6 +622,18 @@ public partial class ImageAnnotationWindow : Window
                 arrowCanvas.Children.Add(head);
                 return arrowCanvas;
 
+            case AnnotationTool.Highlight:
+                var highlightRect = new Rectangle
+                {
+                    Fill = new SolidColorBrush(Color.FromArgb(0x55, _currentColor.R, _currentColor.G, _currentColor.B)),
+                    Stroke = null,
+                    RadiusX = 3,
+                    RadiusY = 3
+                };
+                Canvas.SetLeft(highlightRect, start.X);
+                Canvas.SetTop(highlightRect, start.Y);
+                return highlightRect;
+
             case AnnotationTool.Blur:
                 var blurRect = new Rectangle
                 {
@@ -545,18 +662,6 @@ public partial class ImageAnnotationWindow : Window
                 Canvas.SetLeft(redactRect, start.X);
                 Canvas.SetTop(redactRect, start.Y);
                 return redactRect;
-
-            case AnnotationTool.Highlight:
-                var highlightRect = new Rectangle
-                {
-                    Fill = new SolidColorBrush(Color.FromArgb(0x55, _currentColor.R, _currentColor.G, _currentColor.B)),
-                    Stroke = null,
-                    RadiusX = 2,
-                    RadiusY = 2
-                };
-                Canvas.SetLeft(highlightRect, start.X);
-                Canvas.SetTop(highlightRect, start.Y);
-                return highlightRect;
 
             case AnnotationTool.Crop:
                 var cropMarquee = new Rectangle
@@ -636,10 +741,11 @@ public partial class ImageAnnotationWindow : Window
 
     private void PlaceStepBadge(Point pos)
     {
+        double diameter = Math.Max(24, _strokeThickness * 4);
         var badge = new Grid
         {
-            Width = 28,
-            Height = 28,
+            Width = diameter,
+            Height = diameter,
             Cursor = Cursors.Hand
         };
 
@@ -655,7 +761,7 @@ public partial class ImageAnnotationWindow : Window
             Text = _stepBadgeCounter.ToString(),
             Foreground = Brushes.White,
             FontWeight = FontWeights.Bold,
-            FontSize = 13,
+            FontSize = Math.Max(11, diameter * 0.45),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -663,17 +769,18 @@ public partial class ImageAnnotationWindow : Window
         badge.Children.Add(circle);
         badge.Children.Add(text);
 
-        Canvas.SetLeft(badge, Math.Max(0, pos.X - 14));
-        Canvas.SetTop(badge, Math.Max(0, pos.Y - 14));
+        Canvas.SetLeft(badge, Math.Max(0, pos.X - diameter / 2));
+        Canvas.SetTop(badge, Math.Max(0, pos.Y - diameter / 2));
 
         DrawingCanvas.Children.Add(badge);
         _undoStack.Push(badge);
         _redoStack.Clear();
         UpdateUndoRedoState();
         SelectElement(badge);
+        SetDirty(true);
 
         _stepBadgeCounter++;
-        UpdateToolSelection(AnnotationTool.StepBadge);
+        if (TxtNextBadgeNumber != null) TxtNextBadgeNumber.Text = $"Badge #{_stepBadgeCounter}";
     }
 
     private void PromptAddTextAnnotation(Point pos)
@@ -749,7 +856,7 @@ public partial class ImageAnnotationWindow : Window
         {
             var textElement = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(0xCC, 0x18, 0x19, 0x20)),
+                Background = new SolidColorBrush(Color.FromArgb(0xDD, 0x18, 0x19, 0x20)),
                 BorderBrush = new SolidColorBrush(_currentColor),
                 BorderThickness = new Thickness(1.5),
                 CornerRadius = new CornerRadius(4),
@@ -758,7 +865,7 @@ public partial class ImageAnnotationWindow : Window
                 {
                     Text = textBox.Text,
                     Foreground = new SolidColorBrush(_currentColor),
-                    FontSize = Math.Max(12, _strokeThickness * 3.5),
+                    FontSize = Math.Max(12, _strokeThickness * 3.0),
                     FontWeight = FontWeights.SemiBold
                 }
             };
@@ -770,6 +877,7 @@ public partial class ImageAnnotationWindow : Window
             _redoStack.Clear();
             UpdateUndoRedoState();
             SelectElement(textElement);
+            SetDirty(true);
         }
     }
 
@@ -825,6 +933,7 @@ public partial class ImageAnnotationWindow : Window
         _undoStack.Push(new DeletedAnnotationAction(el, DrawingCanvas));
         SelectElement(null);
         UpdateUndoRedoState();
+        SetDirty(true);
     }
 
     private void ApplyCropSelection(FrameworkElement cropMarquee)
@@ -849,6 +958,7 @@ public partial class ImageAnnotationWindow : Window
             _originalBitmap = cropped;
             _baseTunedBitmap = cropped;
             ApplyBitmap(cropped, IOPath.GetFileName(_currentImagePath ?? "Cropped"));
+            SetDirty(true);
             if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Cropped canvas to {cw} × {ch}";
         }
         catch (Exception ex)
@@ -873,15 +983,18 @@ public partial class ImageAnnotationWindow : Window
         if (TxtValBrightness != null) TxtValBrightness.Text = brightness > 0 ? $"+{brightness}" : brightness.ToString();
         if (TxtValContrast != null) TxtValContrast.Text = contrast > 0 ? $"+{contrast}" : contrast.ToString();
         if (TxtValSaturation != null) TxtValSaturation.Text = saturation > 0 ? $"+{saturation}" : saturation.ToString();
-        if (TxtValBlur != null) TxtValBlur.Text = $"{(int)blur}px";
+        if (TxtValBlur != null) TxtValBlur.Text = $"{(int)blur} px";
 
-        // Generate adjusted bitmap buffer
         var adjusted = GenerateAdjustedBitmap(_originalBitmap, brightness, contrast, saturation);
         BaseImageElement.Source = adjusted;
         _baseTunedBitmap = adjusted;
-
-        // Apply real-time blur effect
         BaseImageElement.Effect = blur > 0.5 ? new BlurEffect { Radius = blur } : null;
+
+        bool hasAdjustments = brightness != 0 || contrast != 0 || saturation != 0 || blur > 0.5;
+        if (hasAdjustments)
+        {
+            SetDirty(true);
+        }
     }
 
     private static BitmapSource GenerateAdjustedBitmap(BitmapSource source, int brightness, int contrast, int saturation)
@@ -904,12 +1017,10 @@ public partial class ImageAnnotationWindow : Window
             byte g = pixels[i + 1];
             byte r = pixels[i + 2];
 
-            // 1. Contrast & Brightness
             double dr = cFactor * (r - 128) + 128 + brightness;
             double dg = cFactor * (g - 128) + 128 + brightness;
             double db = cFactor * (b - 128) + 128 + brightness;
 
-            // 2. Saturation
             if (saturation != 0)
             {
                 double gray = 0.299 * dr + 0.587 * dg + 0.114 * db;
@@ -977,7 +1088,21 @@ public partial class ImageAnnotationWindow : Window
 
     #endregion
 
-    #region Watermark Studio
+    #region Watermark Studio (Disabled by default!)
+
+    private void OnWatermarkToggleChanged(object sender, RoutedEventArgs e)
+    {
+        _isWatermarkActive = ChkEnableWatermark?.IsChecked == true;
+
+        if (SecWatermarkControls != null)
+        {
+            SecWatermarkControls.IsEnabled = _isWatermarkActive;
+            SecWatermarkControls.Opacity = _isWatermarkActive ? 1.0 : 0.5;
+        }
+
+        UpdateWatermarkPreview();
+        SetDirty(true);
+    }
 
     private void OnWatermarkTypeChanged(object sender, RoutedEventArgs e)
     {
@@ -1017,11 +1142,23 @@ public partial class ImageAnnotationWindow : Window
             _watermarkLogoPath = dlg.FileName;
             if (TxtWatermarkLogoPath != null) TxtWatermarkLogoPath.Text = IOPath.GetFileName(dlg.FileName);
             UpdateWatermarkPreview();
+            SetDirty(true);
         }
     }
 
     private void UpdateWatermarkPreview()
     {
+        // 1. If watermark is NOT active, remove visual and do not show anything!
+        if (!_isWatermarkActive)
+        {
+            if (_activeWatermarkElement != null && DrawingCanvas != null && DrawingCanvas.Children.Contains(_activeWatermarkElement))
+            {
+                DrawingCanvas.Children.Remove(_activeWatermarkElement);
+                _activeWatermarkElement = null;
+            }
+            return;
+        }
+
         if (DrawingCanvas == null || DrawingCanvas.Width <= 0 || DrawingCanvas.Height <= 0) return;
 
         // Remove previous watermark visual if present
@@ -1039,7 +1176,7 @@ public partial class ImageAnnotationWindow : Window
 
         if (isText)
         {
-            string watermarkText = TxtWatermarkInput?.Text ?? "ORBIT";
+            string watermarkText = TxtWatermarkInput?.Text ?? "CONFIDENTIAL";
             if (string.IsNullOrWhiteSpace(watermarkText)) return;
             double fontSize = SliderWatermarkSize?.Value ?? 36.0;
 
@@ -1108,7 +1245,6 @@ public partial class ImageAnnotationWindow : Window
             }
         }
 
-        // Measure and arrange visual
         visual.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         double vw = visual.DesiredSize.Width > 0 ? visual.DesiredSize.Width : 200;
         double vh = visual.DesiredSize.Height > 0 ? visual.DesiredSize.Height : 50;
@@ -1135,22 +1271,6 @@ public partial class ImageAnnotationWindow : Window
 
         _activeWatermarkElement = visual;
         DrawingCanvas.Children.Add(visual);
-    }
-
-    private void OnApplyWatermarkClicked(object sender, RoutedEventArgs e)
-    {
-        UpdateWatermarkPreview();
-        if (TxtStatusMessage != null) TxtStatusMessage.Text = "Applied watermark overlay to canvas";
-    }
-
-    private void OnRemoveWatermarkClicked(object sender, RoutedEventArgs e)
-    {
-        if (_activeWatermarkElement != null && DrawingCanvas.Children.Contains(_activeWatermarkElement))
-        {
-            DrawingCanvas.Children.Remove(_activeWatermarkElement);
-            _activeWatermarkElement = null;
-            if (TxtStatusMessage != null) TxtStatusMessage.Text = "Watermark removed";
-        }
     }
 
     #endregion
@@ -1213,6 +1333,7 @@ public partial class ImageAnnotationWindow : Window
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
         ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"));
+        SetDirty(true);
     }
 
     private void OnRotateCCWClicked(object sender, RoutedEventArgs e)
@@ -1223,6 +1344,7 @@ public partial class ImageAnnotationWindow : Window
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
         ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"));
+        SetDirty(true);
     }
 
     private void OnFlipHorizontalClicked(object sender, RoutedEventArgs e)
@@ -1233,6 +1355,7 @@ public partial class ImageAnnotationWindow : Window
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
         ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_H"));
+        SetDirty(true);
     }
 
     private void OnFlipVerticalClicked(object sender, RoutedEventArgs e)
@@ -1243,6 +1366,7 @@ public partial class ImageAnnotationWindow : Window
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
         ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_V"));
+        SetDirty(true);
     }
 
     #endregion
@@ -1265,6 +1389,8 @@ public partial class ImageAnnotationWindow : Window
         _redoStack.Push(item);
         UpdateUndoRedoState();
         SelectElement(null);
+        SetDirty(true);
+        if (TxtStatusMessage != null) TxtStatusMessage.Text = "Undid last annotation";
     }
 
     private void OnRedoClicked(object sender, RoutedEventArgs e)
@@ -1283,6 +1409,8 @@ public partial class ImageAnnotationWindow : Window
         _undoStack.Push(item);
         UpdateUndoRedoState();
         SelectElement(item as FrameworkElement);
+        SetDirty(true);
+        if (TxtStatusMessage != null) TxtStatusMessage.Text = "Redid annotation";
     }
 
     private void OnDeleteSelectedClicked(object sender, RoutedEventArgs e) => DeleteSelectedElement();
@@ -1292,13 +1420,22 @@ public partial class ImageAnnotationWindow : Window
         if (MessageBox.Show("Clear all markings and annotations?", "Clear Canvas", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
         {
             ClearCanvasAnnotations();
+            SetDirty(true);
         }
     }
 
     private void UpdateUndoRedoState()
     {
-        if (BtnUndo != null) BtnUndo.IsEnabled = _undoStack.Count > 0;
-        if (BtnRedo != null) BtnRedo.IsEnabled = _redoStack.Count > 0;
+        if (BtnUndo != null)
+        {
+            BtnUndo.IsEnabled = _undoStack.Count > 0;
+            BtnUndo.ToolTip = _undoStack.Count > 0 ? $"Undo (Ctrl+Z) [{_undoStack.Count}]" : "Undo (Ctrl+Z)";
+        }
+        if (BtnRedo != null)
+        {
+            BtnRedo.IsEnabled = _redoStack.Count > 0;
+            BtnRedo.ToolTip = _redoStack.Count > 0 ? $"Redo (Ctrl+Y) [{_redoStack.Count}]" : "Redo (Ctrl+Y)";
+        }
     }
 
     #endregion
@@ -1329,8 +1466,8 @@ public partial class ImageAnnotationWindow : Window
     {
         if (BaseImageElement?.Source is not BitmapSource src || CanvasScaleTransform == null) return;
 
-        double availW = ImageScrollViewer?.ActualWidth > 0 ? ImageScrollViewer.ActualWidth - 64 : 800;
-        double availH = ImageScrollViewer?.ActualHeight > 0 ? ImageScrollViewer.ActualHeight - 64 : 600;
+        double availW = ImageScrollViewer?.ActualWidth > 0 ? ImageScrollViewer.ActualWidth - 72 : 800;
+        double availH = ImageScrollViewer?.ActualHeight > 0 ? ImageScrollViewer.ActualHeight - 72 : 600;
 
         double scaleX = availW / src.PixelWidth;
         double scaleY = availH / src.PixelHeight;
@@ -1415,6 +1552,7 @@ public partial class ImageAnnotationWindow : Window
         }
 
         SaveCanvasToFile(_currentImagePath);
+        SetDirty(false);
         if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Saved in place to {_currentImagePath}";
     }
 
@@ -1440,6 +1578,7 @@ public partial class ImageAnnotationWindow : Window
         if (dlg.ShowDialog() == true)
         {
             SaveCanvasToFile(dlg.FileName);
+            SetDirty(false);
             if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Saved exported image to {dlg.FileName}";
         }
     }
@@ -1538,6 +1677,11 @@ public partial class ImageAnnotationWindow : Window
             OnRedoClicked(sender, e);
             e.Handled = true;
         }
+        else if (e.Key == Key.S && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            OnQuickSaveClicked(sender, e);
+            e.Handled = true;
+        }
         else if (e.Key == Key.C && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
             CopyImageToClipboard();
@@ -1558,7 +1702,9 @@ public partial class ImageAnnotationWindow : Window
                 case Key.O: SetTool(AnnotationTool.Circle); e.Handled = true; break;
                 case Key.T: SetTool(AnnotationTool.Text); e.Handled = true; break;
                 case Key.S: SetTool(AnnotationTool.StepBadge); e.Handled = true; break;
+                case Key.H: SetTool(AnnotationTool.Highlight); e.Handled = true; break;
                 case Key.B: SetTool(AnnotationTool.Blur); e.Handled = true; break;
+                case Key.X: SetTool(AnnotationTool.Redact); e.Handled = true; break;
                 case Key.C: SetTool(AnnotationTool.Crop); e.Handled = true; break;
                 case Key.V: SetTool(AnnotationTool.Select); e.Handled = true; break;
             }

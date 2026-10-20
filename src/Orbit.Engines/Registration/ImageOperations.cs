@@ -216,7 +216,7 @@ public static class ImageOperations
             {
                 Id = "image-editor",
                 Label = "Photo Studio",
-                Description = "Open interactive photo studio with live adjustments, filters, watermarks, and crop.",
+                Description = "Full interactive studio: live color tuning, watermarks, crop, filters, and annotations.",
                 Category = OperationCategory.Edit,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -229,111 +229,13 @@ public static class ImageOperations
                 KeyboardShortcut = "E",
                 Priority = 20
             },
-            new()
-            {
-                Id = "image-crop",
-                Label = "Crop Image",
-                Description = "Crop borders or specify an exact bounding box.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE7AD",
-                KeyboardShortcut = "C",
-                Priority = 21
-            },
-            new()
-            {
-                Id = "image-adjust",
-                Label = "Adjust Light & Colors",
-                Description = "Fine-tune brightness, contrast, saturation, and blur with live canvas preview.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE790",
-                Priority = 22
-            },
-            new()
-            {
-                Id = "image-add-watermark",
-                Label = "Add Watermark",
-                Description = "Overlay custom text or logo watermark with configurable opacity and live placement.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE8AC",
-                Priority = 23
-            },
-            new()
-            {
-                Id = "image-rotate",
-                Label = "Rotate 90° CW",
-                Description = "Rotate image 90° clockwise in-place.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE7AD",
-                KeyboardShortcut = "R",
-                Priority = 24
-            },
-            new()
-            {
-                Id = "image-flip",
-                Label = "Flip Horizontal",
-                Description = "Mirror the image horizontally.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE748",
-                Priority = 25
-            },
-            new()
-            {
-                Id = "image-resize",
-                Label = "Resize (50% Scale)",
-                Description = "Scale dimensions down to 50% maintaining aspect ratio.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE744",
-                Priority = 26
-            },
 
             // === Annotate ===
             new()
             {
-                Id = "image-annotate-freehand",
-                Label = "Freehand Draw (Pen)",
-                Description = "Draw freehand markings and brush strokes on the image.",
+                Id = "image-annotate",
+                Label = "Annotate & Markup",
+                Description = "Freehand pen draw, arrows, shapes, text callouts, step badges, and blur redactions.",
                 Category = OperationCategory.Annotate,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -343,92 +245,8 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uED63",
-                KeyboardShortcut = "P",
-                Priority = 30
-            },
-            new()
-            {
-                Id = "image-annotate-arrow",
-                Label = "Pointer Arrow",
-                Description = "Place callout arrows pointing at key visual elements.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE74A",
                 KeyboardShortcut = "A",
-                Priority = 31
-            },
-            new()
-            {
-                Id = "image-annotate-text",
-                Label = "Text Callout",
-                Description = "Overlay formatted text labels and captions.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE8D2",
-                KeyboardShortcut = "T",
-                Priority = 32
-            },
-            new()
-            {
-                Id = "image-blur-region",
-                Label = "Blur / Privacy Redact",
-                Description = "Apply Gaussian blur to redact sensitive faces, passwords, or credentials.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE709",
-                KeyboardShortcut = "B",
-                Priority = 33
-            },
-            new()
-            {
-                Id = "image-annotate-step",
-                Label = "Numbered Step Badges",
-                Description = "Click to place sequential numbered badges (1, 2, 3...) for guides and walkthroughs.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE896",
-                KeyboardShortcut = "S",
-                Priority = 34
-            },
-            new()
-            {
-                Id = "image-pixelate-region",
-                Label = "Pixelate Region",
-                Description = "Redact confidential content using a mosaic pixelation filter.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE74C",
-                Priority = 35
+                Priority = 30
             },
 
             // === Optimize ===

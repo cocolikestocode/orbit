@@ -1,9 +1,9 @@
 <Window x:Class="Orbit.App.Views.ImageAnnotationWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Orbit — Image Studio &amp; Annotator"
-        Height="820" Width="1240"
-        MinHeight="620" MinWidth="900"
+        Title="Orbit — Image Studio"
+        Height="840" Width="1280"
+        MinHeight="640" MinWidth="940"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource OrbitBackgroundBrush}">
 
@@ -50,8 +50,8 @@
 
             <!-- Mini Color Swatch Style -->
             <Style x:Key="ColorSwatchStyle" TargetType="Button">
-                <Setter Property="Width" Value="24" />
-                <Setter Property="Height" Value="24" />
+                <Setter Property="Width" Value="26" />
+                <Setter Property="Height" Value="26" />
                 <Setter Property="Margin" Value="3" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
@@ -59,8 +59,8 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="Border" 
                                     Background="{TemplateBinding Background}" 
-                                    CornerRadius="12" 
-                                    BorderBrush="#454A5C" 
+                                    CornerRadius="13" 
+                                    BorderBrush="#3D4252" 
                                     BorderThickness="1.5">
                                 <Ellipse x:Name="InnerDot" Width="8" Height="8" Fill="White" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
@@ -70,7 +70,7 @@
                                 </Trigger>
                                 <Trigger Property="Tag" Value="Selected">
                                     <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource OrbitAccentBrush}" />
-                                    <Setter TargetName="Border" Property="BorderThickness" Value="2" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="2.5" />
                                     <Setter TargetName="InnerDot" Property="Visibility" Value="Visible" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -92,10 +92,10 @@
         </Grid.RowDefinitions>
 
         <!-- TOP HEADER BAR -->
-        <Border Grid.Row="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,0,1" Padding="16,9">
+        <Border Grid.Row="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,0,1" Padding="16,8">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <!-- Left: Title & File Badge -->
+                    <!-- Left: Title, File Name & Dirty Status Badge -->
                     <ColumnDefinition Width="Auto"/>
                     <!-- Center: Studio Mode Tabs & History / Zoom -->
                     <ColumnDefinition Width="*"/>
@@ -103,21 +103,31 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Section: Title & Loaded Image Meta -->
+                <!-- Left Section: Title & Dirty State Badge -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="32" Height="32" CornerRadius="8" Background="{StaticResource OrbitAccentBrush}" Margin="0,0,12,0">
+                    <Border Width="32" Height="32" CornerRadius="8" Background="{StaticResource OrbitAccentBrush}" Margin="0,0,10,0">
                         <TextBlock Text="◈" Foreground="White" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Orbit Image Studio" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="15" FontWeight="Bold"/>
-                        <TextBlock x:Name="TxtImageMeta" Text="No image loaded" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" Margin="0,1,0,0"/>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Orbit Studio" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="14" FontWeight="Bold" Margin="0,0,8,0"/>
+                            <!-- Saved State Badge -->
+                            <Border x:Name="BadgeSavedState" Background="#162B21" BorderBrush="#10B981" BorderThickness="1" CornerRadius="6" Padding="6,2" Visibility="Visible">
+                                <TextBlock Text="✓ Saved" Foreground="#10B981" FontSize="10" FontWeight="SemiBold"/>
+                            </Border>
+                            <!-- Unsaved Changes Badge -->
+                            <Border x:Name="BadgeUnsavedState" Background="#331D10" BorderBrush="{StaticResource OrbitAccentBrush}" BorderThickness="1" CornerRadius="6" Padding="6,2" Visibility="Collapsed">
+                                <TextBlock Text="● Unsaved Changes" Foreground="{StaticResource OrbitAccentBrush}" FontSize="10" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock x:Name="TxtImageMeta" Text="No image loaded" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Center Section: Mode Tabs & History / Zoom Controls -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <!-- Mode Switcher Tabs -->
-                    <Border Background="#16171E" CornerRadius="8" Padding="3" Margin="0,0,16,0" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
+                    <Border Background="#16171E" CornerRadius="8" Padding="3" Margin="0,0,14,0" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
                             <Button x:Name="BtnModeMarkup" Content="✏ Markup" Tag="Active" Style="{StaticResource OrbitTabButtonStyle}" Click="OnModeTabClicked"/>
                             <Button x:Name="BtnModeAdjust" Content="🎛 Adjust" Style="{StaticResource OrbitTabButtonStyle}" Click="OnModeTabClicked"/>
@@ -127,7 +137,7 @@
                     </Border>
 
                     <!-- Separator -->
-                    <Rectangle Width="1" Height="22" Fill="{StaticResource OrbitBorderBrush}" Margin="0,0,14,0"/>
+                    <Rectangle Width="1" Height="22" Fill="{StaticResource OrbitBorderBrush}" Margin="0,0,12,0"/>
 
                     <!-- Undo / Redo -->
                     <Button x:Name="BtnUndo" ToolTip="Undo (Ctrl+Z)" Style="{StaticResource ToolButtonStyle}" Width="32" Height="32" Margin="2,0" IsEnabled="False" Click="OnUndoClicked">
@@ -141,7 +151,7 @@
                     <Rectangle Width="1" Height="22" Fill="{StaticResource OrbitBorderBrush}" Margin="12,0"/>
 
                     <!-- Zoom Controls -->
-                    <Button x:Name="BtnZoomOut" ToolTip="Zoom Out" Style="{StaticResource ToolButtonStyle}" Width="30" Height="30" Click="OnZoomOutClicked">
+                    <Button x:Name="BtnZoomOut" ToolTip="Zoom Out (Ctrl+-)" Style="{StaticResource ToolButtonStyle}" Width="30" Height="30" Click="OnZoomOutClicked">
                         <TextBlock Text="−" FontSize="15" FontWeight="Bold" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
                     </Button>
 
@@ -157,7 +167,7 @@
                         <ComboBoxItem Content="200%" />
                     </ComboBox>
 
-                    <Button x:Name="BtnZoomIn" ToolTip="Zoom In" Style="{StaticResource ToolButtonStyle}" Width="30" Height="30" Click="OnZoomInClicked">
+                    <Button x:Name="BtnZoomIn" ToolTip="Zoom In (Ctrl++)" Style="{StaticResource ToolButtonStyle}" Width="30" Height="30" Click="OnZoomInClicked">
                         <TextBlock Text="+" FontSize="15" FontWeight="Bold" Foreground="{StaticResource OrbitTextPrimaryBrush}"/>
                     </Button>
 
@@ -168,9 +178,9 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="BtnCopyClipboard" Content="📋 Copy" ToolTip="Copy composited image to Clipboard (Ctrl+C)" 
                             Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,8,0" Click="OnCopyClipboardClicked"/>
-                    <Button x:Name="BtnSaveQuick" Content="Save" ToolTip="Overwrite original image" 
+                    <Button x:Name="BtnSaveQuick" Content="💾 Save" ToolTip="Save changes to original file (Ctrl+S)" 
                             Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,8,0" Click="OnQuickSaveClicked"/>
-                    <Button x:Name="BtnSaveAs" Content="💾 Save As..." ToolTip="Export image to disk" 
+                    <Button x:Name="BtnSaveAs" Content="Export As..." ToolTip="Export image to new file" 
                             Style="{StaticResource OrbitAccentButtonStyle}" Click="OnSaveAsClicked"/>
                 </StackPanel>
             </Grid>
@@ -180,92 +190,75 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <!-- Left Sidebar Toolbar (Markup Tools) -->
-                <ColumnDefinition Width="64" x:Name="ColLeftToolbar"/>
-                <!-- Canvas Center -->
+                <ColumnDefinition Width="60" x:Name="ColLeftToolbar"/>
+                <!-- Canvas Center Area -->
                 <ColumnDefinition Width="*"/>
-                <!-- Right Inspector / Adjustment & Watermark Panel -->
+                <!-- Right Dynamic Contextual Inspector Panel -->
                 <ColumnDefinition Width="320" x:Name="ColRightInspector"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LEFT SIDEBAR TOOLBAR (MARKUP TOOLS) -->
-            <Border Grid.Column="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,1,0" Padding="8,10">
+            <!-- LEFT TOOLBAR (MARKUP TOOLS) -->
+            <Border Grid.Column="0" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="0,0,1,0" Padding="6,8">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel HorizontalAlignment="Center">
-                        <!-- Select Tool -->
-                        <Button x:Name="BtnToolSelect" Tag="Active" ToolTip="Select / Move Elements (V)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
-                            <TextBlock Text="↖" FontSize="17" FontWeight="Bold"/>
+                        <!-- Freehand Pen (P) -->
+                        <Button x:Name="BtnToolPen" Tag="Active" ToolTip="Freehand Pen / Brush (P)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="✏" FontSize="17" Foreground="#FF7A1A" FontWeight="Bold"/>
                         </Button>
 
-                        <!-- Freehand Pen (Free Draw) -->
-                        <Button x:Name="BtnToolPen" ToolTip="Freehand Pen Draw (P)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
-                            <TextBlock Text="✏" FontSize="16" Foreground="#FF7A1A" FontWeight="Bold"/>
-                        </Button>
-
-                        <!-- Arrow -->
-                        <Button x:Name="BtnToolArrow" ToolTip="Directional Arrow (A)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                        <!-- Arrow (A) -->
+                        <Button x:Name="BtnToolArrow" ToolTip="Callout Arrow (A)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
                             <TextBlock Text="➔" FontSize="17" Foreground="#EF4444" FontWeight="Bold"/>
                         </Button>
 
-                        <!-- Rectangle -->
+                        <!-- Rectangle (R) -->
                         <Button x:Name="BtnToolRectangle" ToolTip="Rectangle Shape (R)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
                             <TextBlock Text="▭" FontSize="17" FontWeight="Bold"/>
                         </Button>
 
-                        <!-- Circle / Ellipse -->
-                        <Button x:Name="BtnToolCircle" ToolTip="Circle Shape (O)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                        <!-- Circle (O) -->
+                        <Button x:Name="BtnToolCircle" ToolTip="Circle / Ellipse (O)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
                             <TextBlock Text="○" FontSize="17" FontWeight="Bold"/>
                         </Button>
 
-                        <!-- Text Callout -->
-                        <Button x:Name="BtnToolText" ToolTip="Text Annotation (T)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                        <!-- Text (T) -->
+                        <Button x:Name="BtnToolText" ToolTip="Text Callout (T)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
                             <TextBlock Text="T" FontSize="16" FontWeight="Bold"/>
                         </Button>
 
-                        <!-- Numbered Step Badge -->
+                        <!-- Numbered Step Badge (S) -->
                         <Button x:Name="BtnToolStepBadge" ToolTip="Numbered Step Badge 1, 2, 3... (S)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
-                            <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource OrbitAccentBrush}">
-                                <TextBlock Text="①" FontSize="13" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Width="20" Height="20" CornerRadius="10" Background="{StaticResource OrbitAccentBrush}">
+                                <TextBlock Text="①" FontSize="12" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                         </Button>
 
-                        <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,6"/>
+                        <!-- Highlighter (H) -->
+                        <Button x:Name="BtnToolHighlight" ToolTip="Translucent Highlighter (H)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="▮" FontSize="17" Foreground="#FACC15"/>
+                        </Button>
 
-                        <!-- Blur / Pixelate -->
+                        <!-- Blur (B) -->
                         <Button x:Name="BtnToolBlur" ToolTip="Blur Sensitive Area (B)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
                             <TextBlock Text="░" FontSize="18" FontWeight="Bold" Foreground="#38BDF8"/>
                         </Button>
 
-                        <!-- Highlight -->
-                        <Button x:Name="BtnToolHighlight" ToolTip="Highlight (H)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
-                            <TextBlock Text="▮" FontSize="17" Foreground="#FACC15"/>
-                        </Button>
-
-                        <!-- Redact -->
-                        <Button x:Name="BtnToolRedact" ToolTip="Solid Redact Bar (X)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
-                            <Border Width="20" Height="8" Background="Black" BorderBrush="#64748B" BorderThickness="1" CornerRadius="1"/>
+                        <!-- Redact (X) -->
+                        <Button x:Name="BtnToolRedact" ToolTip="Solid Blackout Bar (X)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <Border Width="18" Height="8" Background="Black" BorderBrush="#64748B" BorderThickness="1" CornerRadius="1"/>
                         </Button>
 
                         <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,6"/>
 
-                        <!-- Color Palette Swatches -->
-                        <TextBlock Text="COLOR" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,3"/>
-                        <Button x:Name="SwatchRed" Background="#EF4444" Tag="Selected" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Red"/>
-                        <Button x:Name="SwatchOrange" Background="#FF7A1A" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Orange"/>
-                        <Button x:Name="SwatchYellow" Background="#F59E0B" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Yellow"/>
-                        <Button x:Name="SwatchGreen" Background="#10B981" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Green"/>
-                        <Button x:Name="SwatchCyan" Background="#06B6D4" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Cyan"/>
-                        <Button x:Name="SwatchWhite" Background="#FFFFFF" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="White"/>
-                        <Button x:Name="SwatchBlack" Background="#000000" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Black"/>
+                        <!-- Select / Move (V) -->
+                        <Button x:Name="BtnToolSelect" ToolTip="Select &amp; Move Markup (V)" Style="{StaticResource ToolButtonStyle}" Click="OnToolSelected">
+                            <TextBlock Text="↖" FontSize="17" FontWeight="Bold"/>
+                        </Button>
 
                         <Rectangle Height="1" Fill="{StaticResource OrbitBorderBrush}" Margin="4,6"/>
-
-                        <!-- Stroke Thickness Button -->
-                        <TextBlock Text="SIZE" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,3"/>
-                        <Button x:Name="BtnStrokeWidth" Content="4px" ToolTip="Stroke Width (click to cycle 2, 4, 8, 12px)" 
-                                Style="{StaticResource ToolButtonStyle}" Width="36" Height="26" FontSize="11" Click="OnStrokeWidthCycleClicked"/>
 
                         <!-- Delete Selected -->
-                        <Button x:Name="BtnDeleteSelected" ToolTip="Delete Selected (Del)" Style="{StaticResource ToolButtonStyle}" Margin="0,6,0,0" Click="OnDeleteSelectedClicked">
+                        <Button x:Name="BtnDeleteSelected" ToolTip="Delete Selected (Del)" Style="{StaticResource ToolButtonStyle}" Click="OnDeleteSelectedClicked">
                             <TextBlock Text="🗑" FontSize="15" Foreground="#EF4444"/>
                         </Button>
 
@@ -278,29 +271,34 @@
             </Border>
 
             <!-- CENTER CANVAS AREA -->
-            <Grid Grid.Column="1" Background="#111217" AllowDrop="True" Drop="OnCanvasDrop" DragOver="OnCanvasDragOver">
+            <Grid Grid.Column="1" Background="#121318" AllowDrop="True" Drop="OnCanvasDrop" DragOver="OnCanvasDragOver">
                 <ScrollViewer x:Name="ImageScrollViewer" 
                               HorizontalScrollBarVisibility="Auto" 
                               VerticalScrollBarVisibility="Auto"
                               Background="Transparent"
                               PreviewMouseWheel="OnScrollViewerPreviewMouseWheel">
-                    <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="32">
+                    <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="36">
                         <!-- Canvas with natural pixel dimensions and scale transform -->
-                        <Canvas x:Name="DrawingCanvas"
-                                Width="800" Height="600"
-                                Background="Transparent"
-                                MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
-                                MouseMove="OnCanvasMouseMove"
-                                MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
-                            <Canvas.LayoutTransform>
-                                <ScaleTransform x:Name="CanvasScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
-                            </Canvas.LayoutTransform>
+                        <Border BorderBrush="#2D313E" BorderThickness="1" CornerRadius="2">
+                            <Canvas x:Name="DrawingCanvas"
+                                    Width="800" Height="600"
+                                    Background="Transparent"
+                                    MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
+                                    MouseMove="OnCanvasMouseMove"
+                                    MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
+                                <Canvas.Effect>
+                                    <DropShadowEffect BlurRadius="28" ShadowDepth="4" Opacity="0.55" Color="#000000"/>
+                                </Canvas.Effect>
+                                <Canvas.LayoutTransform>
+                                    <ScaleTransform x:Name="CanvasScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+                                </Canvas.LayoutTransform>
 
-                            <!-- Base Image Render Target -->
-                            <Image x:Name="BaseImageElement" Stretch="None"/>
+                                <!-- Base Image Render Target -->
+                                <Image x:Name="BaseImageElement" Stretch="None"/>
 
-                            <!-- Active Annotation Elements & Watermarks reside as children here -->
-                        </Canvas>
+                                <!-- Active Annotation Elements & Watermarks reside as children here -->
+                            </Canvas>
+                        </Border>
                     </Grid>
                 </ScrollViewer>
 
@@ -316,34 +314,80 @@
                             <TextBlock Text="🖼" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="Drag &amp; Drop Image Here" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Supports PNG, JPG, WebP, BMP, GIF, TIFF. Markup with pen, arrows, watermarks, light/contrast tuning, and privacy redaction." 
+                        <TextBlock Text="Drop any PNG, JPG, WebP, BMP to edit, annotate, tune, crop, or watermark." 
                                    Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,16"/>
                         <Button Content="Choose Image File..." Style="{StaticResource OrbitAccentButtonStyle}" HorizontalAlignment="Center" Click="OnOpenImageClicked" IsHitTestVisible="True"/>
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <!-- RIGHT INSPECTOR PANEL (ADJUSTMENTS / WATERMARK / TRANSFORM) -->
+            <!-- RIGHT DYNAMIC CONTEXTUAL INSPECTOR PANEL -->
             <Border Grid.Column="2" Background="{StaticResource OrbitSurfaceBrush}" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1,0,0,0" Padding="18,16">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <!-- ==================== TAB 1: MARKUP QUICK CONTROLS ==================== -->
+                        <!-- ==================== TAB 1: MARKUP CONTEXTUAL INSPECTOR ==================== -->
                         <StackPanel x:Name="PnlMarkupDetails" Visibility="Visible">
-                            <TextBlock Text="ANNOTATION &amp; MARKUP" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,12"/>
-                            
-                            <Border Background="#16171E" CornerRadius="8" Padding="12" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" Margin="0,0,0,14">
+                            <TextBlock x:Name="TxtInspectorHeader" Text="PEN &amp; BRUSH PROPERTIES" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                            <!-- Stroke Thickness Slider Section -->
+                            <StackPanel x:Name="SecThicknessSlider" Margin="0,0,0,16">
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="Stroke Thickness" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="TxtValThickness" Text="6 px" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Slider x:Name="SliderThickness" Minimum="1" Maximum="64" Value="6" Style="{StaticResource OrbitSliderStyle}" ValueChanged="OnThicknessSliderChanged"/>
+
+                                <!-- Live Stroke Preview Dot -->
+                                <Border Background="#16171E" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="8" Height="50" Margin="0,10,0,0">
+                                    <Ellipse x:Name="EllipseStrokePreview" Width="6" Height="6" Fill="#EF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Stroke Opacity Slider Section -->
+                            <StackPanel x:Name="SecOpacitySlider" Margin="0,0,0,16">
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="Opacity" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="TxtValOpacity" Text="100%" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Slider x:Name="SliderOpacity" Minimum="10" Maximum="100" Value="100" Style="{StaticResource OrbitSliderStyle}" ValueChanged="OnOpacitySliderChanged"/>
+                            </StackPanel>
+
+                            <!-- Numbered Step Badge Section (Shown when Step tool active) -->
+                            <StackPanel x:Name="SecStepBadgeOptions" Visibility="Collapsed" Margin="0,0,0,16">
+                                <Border Background="#16171E" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                    <StackPanel>
+                                        <TextBlock Text="Next Badge Number" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11"/>
+                                        <TextBlock x:Name="TxtNextBadgeNumber" Text="Badge #1" Foreground="{StaticResource OrbitAccentBrush}" FontSize="16" FontWeight="Bold" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Button Content="↺ Reset Counter to 1" Style="{StaticResource OrbitSecondaryButtonStyle}" Click="OnResetBadgeCounterClicked"/>
+                            </StackPanel>
+
+                            <!-- Color Palette Grid -->
+                            <TextBlock Text="Color Palette" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <WrapPanel Margin="0,0,0,18">
+                                <Button x:Name="SwatchRed" Background="#EF4444" Tag="Selected" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Red"/>
+                                <Button x:Name="SwatchCoral" Background="#FF5722" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Coral"/>
+                                <Button x:Name="SwatchOrange" Background="#FF7A1A" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Orange"/>
+                                <Button x:Name="SwatchAmber" Background="#F59E0B" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Amber"/>
+                                <Button x:Name="SwatchLime" Background="#84CC16" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Lime"/>
+                                <Button x:Name="SwatchGreen" Background="#10B981" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Green"/>
+                                <Button x:Name="SwatchCyan" Background="#06B6D4" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Cyan"/>
+                                <Button x:Name="SwatchBlue" Background="#3B82F6" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Blue"/>
+                                <Button x:Name="SwatchPurple" Background="#8B5CF6" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Purple"/>
+                                <Button x:Name="SwatchPink" Background="#EC4899" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Pink"/>
+                                <Button x:Name="SwatchWhite" Background="#FFFFFF" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="White"/>
+                                <Button x:Name="SwatchBlack" Background="#000000" Style="{StaticResource ColorSwatchStyle}" Click="OnColorSwatchClicked" ToolTip="Black"/>
+                            </WrapPanel>
+
+                            <!-- Tool Quick Switching Hints -->
+                            <Border Background="#16171E" CornerRadius="8" Padding="12" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
                                 <StackPanel>
-                                    <TextBlock Text="Active Tool" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12"/>
-                                    <TextBlock x:Name="TxtActiveToolName" Text="Freehand Pen (Draw freely on image)" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                    <TextBlock Text="Shortcuts" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="P: Pen • A: Arrow • R: Rect • O: Circle&#x0a;T: Text • S: Step • B: Blur • X: Redact&#x0a;Del: Remove • Ctrl+Z: Undo" 
+                                               Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" LineHeight="16"/>
                                 </StackPanel>
                             </Border>
-
-                            <TextBlock Text="Instructions" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <TextBlock Text="• Drag to draw or place shapes&#x0a;• Click 'Select' (↖) to move or resize elements&#x0a;• Press Del to delete selected markup&#x0a;• Press P for Pen, A for Arrow, T for Text" 
-                                       Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,16"/>
-
-                            <Button Content="Switch to Watermark Mode" Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,0,8" Click="OnGoToWatermarkClicked"/>
-                            <Button Content="Switch to Adjustments Mode" Style="{StaticResource OrbitSecondaryButtonStyle}" Click="OnGoToAdjustClicked"/>
                         </StackPanel>
 
                         <!-- ==================== TAB 2: ADJUSTMENTS PANEL ==================== -->
@@ -355,28 +399,28 @@
                                 <TextBlock Text="Brightness" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
                                 <TextBlock x:Name="TxtValBrightness" Text="0" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
                             </Grid>
-                            <Slider x:Name="SliderBrightness" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,16" ValueChanged="OnAdjustmentSliderChanged"/>
+                            <Slider x:Name="SliderBrightness" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,14" ValueChanged="OnAdjustmentSliderChanged"/>
 
                             <!-- Contrast -->
                             <Grid Margin="0,0,0,6">
                                 <TextBlock Text="Contrast" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
                                 <TextBlock x:Name="TxtValContrast" Text="0" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
                             </Grid>
-                            <Slider x:Name="SliderContrast" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,16" ValueChanged="OnAdjustmentSliderChanged"/>
+                            <Slider x:Name="SliderContrast" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,14" ValueChanged="OnAdjustmentSliderChanged"/>
 
                             <!-- Saturation -->
                             <Grid Margin="0,0,0,6">
                                 <TextBlock Text="Saturation" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
                                 <TextBlock x:Name="TxtValSaturation" Text="0" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
                             </Grid>
-                            <Slider x:Name="SliderSaturation" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,16" ValueChanged="OnAdjustmentSliderChanged"/>
+                            <Slider x:Name="SliderSaturation" Minimum="-100" Maximum="100" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,14" ValueChanged="OnAdjustmentSliderChanged"/>
 
                             <!-- Blur / Soften -->
                             <Grid Margin="0,0,0,6">
                                 <TextBlock Text="Blur / Soften" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="TxtValBlur" Text="0" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
+                                <TextBlock x:Name="TxtValBlur" Text="0 px" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
                             </Grid>
-                            <Slider x:Name="SliderBlur" Minimum="0" Maximum="20" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,20" ValueChanged="OnAdjustmentSliderChanged"/>
+                            <Slider x:Name="SliderBlur" Minimum="0" Maximum="20" Value="0" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,18" ValueChanged="OnAdjustmentSliderChanged"/>
 
                             <!-- Quick Presets -->
                             <TextBlock Text="One-Click Presets" Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -395,58 +439,62 @@
                         <StackPanel x:Name="PnlWatermark" Visibility="Collapsed">
                             <TextBlock Text="WATERMARK STUDIO" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,14"/>
 
-                            <!-- Watermark Type Radio -->
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                                <RadioButton x:Name="RbWatermarkText" Content="Text Watermark" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" Margin="0,0,16,0" Checked="OnWatermarkTypeChanged"/>
-                                <RadioButton x:Name="RbWatermarkLogo" Content="Logo Image" Foreground="{StaticResource OrbitTextPrimaryBrush}" Checked="OnWatermarkTypeChanged"/>
-                            </StackPanel>
+                            <!-- Watermark Activation Toggle (OFF by default!) -->
+                            <Border Background="#16171E" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                <CheckBox x:Name="ChkEnableWatermark" Content="Enable Watermark Overlay" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" IsChecked="False" Checked="OnWatermarkToggleChanged" Unchecked="OnWatermarkToggleChanged"/>
+                            </Border>
 
-                            <!-- Text Section -->
-                            <StackPanel x:Name="SecWatermarkText">
-                                <TextBlock Text="Watermark Text" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox x:Name="TxtWatermarkInput" Text="ORBIT CONFIDENTIAL" Style="{StaticResource OrbitTextBoxStyle}" Margin="0,0,0,12" TextChanged="OnWatermarkInputChanged"/>
+                            <!-- Watermark Settings (Enabled only when checkbox is checked) -->
+                            <StackPanel x:Name="SecWatermarkControls" IsEnabled="False" Opacity="0.5">
+                                <!-- Watermark Type Radio -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <RadioButton x:Name="RbWatermarkText" Content="Text Watermark" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" Margin="0,0,16,0" Checked="OnWatermarkTypeChanged"/>
+                                    <RadioButton x:Name="RbWatermarkLogo" Content="Logo Image" Foreground="{StaticResource OrbitTextPrimaryBrush}" Checked="OnWatermarkTypeChanged"/>
+                                </StackPanel>
 
+                                <!-- Text Section -->
+                                <StackPanel x:Name="SecWatermarkText">
+                                    <TextBlock Text="Watermark Text" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="TxtWatermarkInput" Text="CONFIDENTIAL" Style="{StaticResource OrbitTextBoxStyle}" Margin="0,0,0,12" TextChanged="OnWatermarkInputChanged"/>
+
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="Font Size" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12"/>
+                                        <TextBlock x:Name="TxtValWatermarkSize" Text="36px" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <Slider x:Name="SliderWatermarkSize" Minimum="12" Maximum="96" Value="36" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,12" ValueChanged="OnWatermarkInputChanged"/>
+                                </StackPanel>
+
+                                <!-- Logo Section -->
+                                <StackPanel x:Name="SecWatermarkLogo" Visibility="Collapsed">
+                                    <TextBlock Text="Logo Image" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <Button Content="Browse Logo Image..." Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,0,8" Click="OnBrowseWatermarkLogoClicked"/>
+                                    <TextBlock x:Name="TxtWatermarkLogoPath" Text="No logo selected" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,0,0,12"/>
+
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="Logo Scale" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12"/>
+                                        <TextBlock x:Name="TxtValWatermarkScale" Text="40%" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
+                                    </Grid>
+                                    <Slider x:Name="SliderWatermarkScale" Minimum="10" Maximum="100" Value="40" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,12" ValueChanged="OnWatermarkInputChanged"/>
+                                </StackPanel>
+
+                                <!-- Opacity -->
                                 <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="Font Size" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12"/>
-                                    <TextBlock x:Name="TxtValWatermarkSize" Text="36px" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="Opacity" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="TxtValWatermarkOpacity" Text="60%" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
                                 </Grid>
-                                <Slider x:Name="SliderWatermarkSize" Minimum="12" Maximum="96" Value="36" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,12" ValueChanged="OnWatermarkInputChanged"/>
+                                <Slider x:Name="SliderWatermarkOpacity" Minimum="10" Maximum="100" Value="60" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,14" ValueChanged="OnWatermarkInputChanged"/>
+
+                                <!-- Placement Position -->
+                                <TextBlock Text="Placement Position" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox x:Name="CmbWatermarkPosition" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,16" SelectionChanged="OnWatermarkPositionChanged">
+                                    <ComboBoxItem Content="Bottom-Right" IsSelected="True"/>
+                                    <ComboBoxItem Content="Bottom-Left"/>
+                                    <ComboBoxItem Content="Center"/>
+                                    <ComboBoxItem Content="Top-Right"/>
+                                    <ComboBoxItem Content="Top-Left"/>
+                                    <ComboBoxItem Content="Diagonal Tiled"/>
+                                </ComboBox>
                             </StackPanel>
-
-                            <!-- Logo Section -->
-                            <StackPanel x:Name="SecWatermarkLogo" Visibility="Collapsed">
-                                <TextBlock Text="Logo Image" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <Button Content="Browse Logo Image..." Style="{StaticResource OrbitSecondaryButtonStyle}" Margin="0,0,0,8" Click="OnBrowseWatermarkLogoClicked"/>
-                                <TextBlock x:Name="TxtWatermarkLogoPath" Text="No logo selected" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,0,0,12"/>
-
-                                <Grid Margin="0,0,0,4">
-                                    <TextBlock Text="Logo Scale" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12"/>
-                                    <TextBlock x:Name="TxtValWatermarkScale" Text="40%" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
-                                </Grid>
-                                <Slider x:Name="SliderWatermarkScale" Minimum="10" Maximum="100" Value="40" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,12" ValueChanged="OnWatermarkInputChanged"/>
-                            </StackPanel>
-
-                            <!-- Opacity -->
-                            <Grid Margin="0,0,0,4">
-                                <TextBlock Text="Opacity" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold"/>
-                                <TextBlock x:Name="TxtValWatermarkOpacity" Text="60%" Foreground="{StaticResource OrbitAccentBrush}" FontSize="12" HorizontalAlignment="Right"/>
-                            </Grid>
-                            <Slider x:Name="SliderWatermarkOpacity" Minimum="10" Maximum="100" Value="60" Style="{StaticResource OrbitSliderStyle}" Margin="0,0,0,14" ValueChanged="OnWatermarkInputChanged"/>
-
-                            <!-- Placement Position -->
-                            <TextBlock Text="Placement Position" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="CmbWatermarkPosition" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,16" SelectionChanged="OnWatermarkPositionChanged">
-                                <ComboBoxItem Content="Bottom-Right" IsSelected="True"/>
-                                <ComboBoxItem Content="Bottom-Left"/>
-                                <ComboBoxItem Content="Center"/>
-                                <ComboBoxItem Content="Top-Right"/>
-                                <ComboBoxItem Content="Top-Left"/>
-                                <ComboBoxItem Content="Diagonal Tiled"/>
-                            </ComboBox>
-
-                            <!-- Actions -->
-                            <Button x:Name="BtnApplyWatermark" Content="✓ Apply Watermark to Canvas" Style="{StaticResource OrbitAccentButtonStyle}" Margin="0,0,0,8" Click="OnApplyWatermarkClicked"/>
-                            <Button x:Name="BtnRemoveWatermark" Content="Remove Watermark" Style="{StaticResource OrbitSecondaryButtonStyle}" Click="OnRemoveWatermarkClicked"/>
                         </StackPanel>
 
                         <!-- ==================== TAB 4: TRANSFORM & CROP PANEL ==================== -->
@@ -494,7 +542,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Shortcuts: P Pen • A Arrow • T Text • S Step • Del Remove • Ctrl+C Copy • Ctrl+Z Undo" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11"/>
+                    <TextBlock Text="Shortcuts: P Pen • A Arrow • R Rect • T Text • S Step • Del Remove • Ctrl+S Save • Ctrl+Z Undo" Foreground="{StaticResource OrbitTextMutedBrush}" FontSize="11"/>
                 </StackPanel>
             </Grid>
         </Border>
