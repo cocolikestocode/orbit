@@ -164,10 +164,13 @@ public partial class App : Application
         bool isImageWorkspace = 
             operation.Category == OperationCategory.Annotate || 
             operation.Id == "image-crop" || 
+            operation.Id == "image-editor" ||
+            operation.Id == "image-adjust" ||
+            operation.Id == "image-add-watermark" ||
             operation.Id.StartsWith("image-annotate") ||
             (operation.RequiresWorkspace && files.Length > 0 && files[0].Family == FileFamily.Image);
 
-        // 1. If an image annotation / crop workspace operation is selected, open ImageAnnotationWindow
+        // 1. If an image studio / annotation / crop workspace operation is selected, open ImageAnnotationWindow
         if (isImageWorkspace)
         {
             try
@@ -176,9 +179,42 @@ public partial class App : Application
                 if (files.Length > 0 && files[0].Family == FileFamily.Image)
                 {
                     annotator.LoadImage(files[0].FilePath);
+
                     if (operation.Id == "image-crop")
                     {
-                        annotator.SetTool(ImageAnnotationWindow.AnnotationTool.Crop);
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Transform, ImageAnnotationWindow.AnnotationTool.Crop);
+                    }
+                    else if (operation.Id == "image-adjust")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Adjust);
+                    }
+                    else if (operation.Id == "image-add-watermark")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Watermark);
+                    }
+                    else if (operation.Id == "image-annotate-freehand")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
+                    }
+                    else if (operation.Id == "image-annotate-arrow")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Arrow);
+                    }
+                    else if (operation.Id == "image-annotate-text")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Text);
+                    }
+                    else if (operation.Id == "image-blur-region")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Blur);
+                    }
+                    else if (operation.Id == "image-annotate-step")
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.StepBadge);
+                    }
+                    else
+                    {
+                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
                     }
                 }
                 annotator.Show();
@@ -186,7 +222,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Could not open Annotator: {ex.Message}\n\n{ex.StackTrace}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"Could not open Image Studio: {ex.Message}\n\n{ex.StackTrace}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             return;
         }

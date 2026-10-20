@@ -214,6 +214,23 @@ public static class ImageOperations
             // === Edit ===
             new()
             {
+                Id = "image-editor",
+                Label = "Photo Studio",
+                Description = "Open interactive photo studio with live adjustments, filters, watermarks, and crop.",
+                Category = OperationCategory.Edit,
+                InputFormats = CommonRasterFormats,
+                OutputFormats = null,
+                SupportsBatch = false,
+                ModifiesOriginal = false,
+                RequiresWorkspace = true,
+                RequiresConfirmation = false,
+                EngineId = "image",
+                IconGlyph = "\uE7AD",
+                KeyboardShortcut = "E",
+                Priority = 20
+            },
+            new()
+            {
                 Id = "image-crop",
                 Label = "Crop Image",
                 Description = "Crop borders or specify an exact bounding box.",
@@ -227,13 +244,45 @@ public static class ImageOperations
                 EngineId = "image",
                 IconGlyph = "\uE7AD",
                 KeyboardShortcut = "C",
-                Priority = 20
+                Priority = 21
+            },
+            new()
+            {
+                Id = "image-adjust",
+                Label = "Adjust Light & Colors",
+                Description = "Fine-tune brightness, contrast, saturation, and blur with live canvas preview.",
+                Category = OperationCategory.Edit,
+                InputFormats = CommonRasterFormats,
+                OutputFormats = null,
+                SupportsBatch = false,
+                ModifiesOriginal = false,
+                RequiresWorkspace = true,
+                RequiresConfirmation = false,
+                EngineId = "image",
+                IconGlyph = "\uE790",
+                Priority = 22
+            },
+            new()
+            {
+                Id = "image-add-watermark",
+                Label = "Add Watermark",
+                Description = "Overlay custom text or logo watermark with configurable opacity and live placement.",
+                Category = OperationCategory.Edit,
+                InputFormats = CommonRasterFormats,
+                OutputFormats = null,
+                SupportsBatch = false,
+                ModifiesOriginal = false,
+                RequiresWorkspace = true,
+                RequiresConfirmation = false,
+                EngineId = "image",
+                IconGlyph = "\uE8AC",
+                Priority = 23
             },
             new()
             {
                 Id = "image-rotate",
-                Label = "Rotate",
-                Description = "Rotate image 90° clockwise, counter-clockwise, or 180°.",
+                Label = "Rotate 90° CW",
+                Description = "Rotate image 90° clockwise in-place.",
                 Category = OperationCategory.Edit,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -244,13 +293,13 @@ public static class ImageOperations
                 EngineId = "image",
                 IconGlyph = "\uE7AD",
                 KeyboardShortcut = "R",
-                Priority = 21
+                Priority = 24
             },
             new()
             {
                 Id = "image-flip",
-                Label = "Flip Horizontal / Vertical",
-                Description = "Mirror the image horizontally or invert vertically.",
+                Label = "Flip Horizontal",
+                Description = "Mirror the image horizontally.",
                 Category = OperationCategory.Edit,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -260,13 +309,13 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uE748",
-                Priority = 22
+                Priority = 25
             },
             new()
             {
                 Id = "image-resize",
-                Label = "Resize Image",
-                Description = "Scale dimensions by percentage or target width/height maintaining aspect ratio.",
+                Label = "Resize (50% Scale)",
+                Description = "Scale dimensions down to 50% maintaining aspect ratio.",
                 Category = OperationCategory.Edit,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -276,111 +325,15 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uE744",
-                Priority = 23
-            },
-            new()
-            {
-                Id = "image-adjust-brightness",
-                Label = "Adjust Brightness",
-                Description = "Lighten or darken image tones.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE706",
-                Priority = 24
-            },
-            new()
-            {
-                Id = "image-adjust-contrast",
-                Label = "Adjust Contrast",
-                Description = "Enhance tonal separation between dark and light regions.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE793",
-                Priority = 25
-            },
-            new()
-            {
-                Id = "image-adjust-saturation",
-                Label = "Adjust Saturation",
-                Description = "Increase vibrancy or convert towards grayscale.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE790",
                 Priority = 26
-            },
-            new()
-            {
-                Id = "image-add-watermark",
-                Label = "Add Watermark",
-                Description = "Overlay custom text or logo watermark with configurable opacity.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE8AC",
-                Priority = 27
-            },
-            new()
-            {
-                Id = "image-add-border",
-                Label = "Add Border / Padding",
-                Description = "Add decorative or padding borders with customizable color and width.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE746",
-                Priority = 28
-            },
-            new()
-            {
-                Id = "image-change-dpi",
-                Label = "Change DPI Resolution",
-                Description = "Adjust print DPI metadata (e.g., 72 DPI to 300 DPI) without re-sampling.",
-                Category = OperationCategory.Edit,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = true,
-                ModifiesOriginal = false,
-                RequiresWorkspace = false,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE792",
-                Priority = 29
             },
 
             // === Annotate ===
             new()
             {
                 Id = "image-annotate-freehand",
-                Label = "Freehand Pen Annotation",
-                Description = "Draw freehand markings and highlights onto image.",
+                Label = "Freehand Draw (Pen)",
+                Description = "Draw freehand markings and brush strokes on the image.",
                 Category = OperationCategory.Annotate,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -390,12 +343,13 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uED63",
+                KeyboardShortcut = "P",
                 Priority = 30
             },
             new()
             {
                 Id = "image-annotate-arrow",
-                Label = "Draw Pointer Arrow",
+                Label = "Pointer Arrow",
                 Description = "Place callout arrows pointing at key visual elements.",
                 Category = OperationCategory.Annotate,
                 InputFormats = CommonRasterFormats,
@@ -406,12 +360,13 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uE74A",
+                KeyboardShortcut = "A",
                 Priority = 31
             },
             new()
             {
                 Id = "image-annotate-text",
-                Label = "Add Text Annotation",
+                Label = "Text Callout",
                 Description = "Overlay formatted text labels and captions.",
                 Category = OperationCategory.Annotate,
                 InputFormats = CommonRasterFormats,
@@ -422,29 +377,14 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uE8D2",
+                KeyboardShortcut = "T",
                 Priority = 32
             },
             new()
             {
-                Id = "image-annotate-shape",
-                Label = "Draw Shape",
-                Description = "Overlay geometric shapes such as rectangles, ellipses, and callouts.",
-                Category = OperationCategory.Annotate,
-                InputFormats = CommonRasterFormats,
-                OutputFormats = null,
-                SupportsBatch = false,
-                ModifiesOriginal = false,
-                RequiresWorkspace = true,
-                RequiresConfirmation = false,
-                EngineId = "image",
-                IconGlyph = "\uE746",
-                Priority = 33
-            },
-            new()
-            {
                 Id = "image-blur-region",
-                Label = "Blur Sensitive Region",
-                Description = "Apply Gaussian blur to redact sensitive faces or credentials.",
+                Label = "Blur / Privacy Redact",
+                Description = "Apply Gaussian blur to redact sensitive faces, passwords, or credentials.",
                 Category = OperationCategory.Annotate,
                 InputFormats = CommonRasterFormats,
                 OutputFormats = null,
@@ -454,6 +394,24 @@ public static class ImageOperations
                 RequiresConfirmation = false,
                 EngineId = "image",
                 IconGlyph = "\uE709",
+                KeyboardShortcut = "B",
+                Priority = 33
+            },
+            new()
+            {
+                Id = "image-annotate-step",
+                Label = "Numbered Step Badges",
+                Description = "Click to place sequential numbered badges (1, 2, 3...) for guides and walkthroughs.",
+                Category = OperationCategory.Annotate,
+                InputFormats = CommonRasterFormats,
+                OutputFormats = null,
+                SupportsBatch = false,
+                ModifiesOriginal = false,
+                RequiresWorkspace = true,
+                RequiresConfirmation = false,
+                EngineId = "image",
+                IconGlyph = "\uE896",
+                KeyboardShortcut = "S",
                 Priority = 34
             },
             new()

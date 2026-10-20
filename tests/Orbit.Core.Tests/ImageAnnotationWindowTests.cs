@@ -86,6 +86,64 @@ public class ImageAnnotationWindowTests : IDisposable
         threadException.Should().BeNull("ImageAnnotationWindow should initialize cleanly without any NullReferenceException");
     }
 
+    [Fact]
+    public void ImageAnnotationWindow_ShouldSupportStudioModesAndTools()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                if (System.Windows.Application.Current == null)
+                {
+                    var app = new System.Windows.Application();
+                    try
+                    {
+                        var dict = new System.Windows.ResourceDictionary
+                        {
+                            Source = new Uri("pack://application:,,,/Orbit.App;component/Themes/DarkTheme.xaml", UriKind.Absolute)
+                        };
+                        app.Resources.MergedDictionaries.Add(dict);
+                    }
+                    catch { }
+                }
+
+                var imgPath = Path.Combine(_tempDir, "studio_test.png");
+                using (var img = new Image<Rgba32>(120, 80))
+                {
+                    img.SaveAsPng(imgPath);
+                }
+
+                var window = new ImageAnnotationWindow();
+                window.LoadImage(imgPath);
+
+                // Test modes
+                window.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
+                window.SetMode(ImageAnnotationWindow.StudioMode.Adjust);
+                window.SetMode(ImageAnnotationWindow.StudioMode.Watermark);
+                window.SetMode(ImageAnnotationWindow.StudioMode.Transform, ImageAnnotationWindow.AnnotationTool.Crop);
+
+                // Test tools
+                window.SetTool(ImageAnnotationWindow.AnnotationTool.Pen);
+                window.SetTool(ImageAnnotationWindow.AnnotationTool.StepBadge);
+                window.SetTool(ImageAnnotationWindow.AnnotationTool.Arrow);
+
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("Image Studio modes and tools should execute cleanly without error");
+    }
+
     public void Dispose()
     {
         try
