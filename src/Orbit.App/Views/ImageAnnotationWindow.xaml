@@ -5,7 +5,7 @@
         Height="840" Width="1280"
         MinHeight="640" MinWidth="940"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource OrbitBackgroundBrush}">
+        Background="{DynamicResource OrbitBackgroundBrush}">
 
     <Window.Resources>
         <ResourceDictionary>

@@ -123,10 +123,7 @@ public partial class OverlayWindow : Window
         var targetFiles = _currentFiles;
         Dismiss();
 
-        if (targetFiles.Length > 0)
-        {
-            OperationSelected?.Invoke(operation, targetFiles);
-        }
+        OperationSelected?.Invoke(operation, targetFiles);
     }
 
     private void OnMenuCancelled()

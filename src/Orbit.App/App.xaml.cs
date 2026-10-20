@@ -163,12 +163,13 @@ public partial class App : Application
 
         bool isImageWorkspace = 
             operation.Category == OperationCategory.Annotate || 
+            operation.Category == OperationCategory.Edit || 
             operation.Id == "image-crop" || 
             operation.Id == "image-editor" ||
             operation.Id == "image-adjust" ||
             operation.Id == "image-add-watermark" ||
             operation.Id.StartsWith("image-annotate") ||
-            (operation.RequiresWorkspace && files.Length > 0 && files[0].Family == FileFamily.Image);
+            (operation.RequiresWorkspace && (files.Length == 0 || files[0].Family == FileFamily.Image));
 
         // 1. If an image studio / annotation / crop workspace operation is selected, open ImageAnnotationWindow
         if (isImageWorkspace)
@@ -179,16 +180,17 @@ public partial class App : Application
                 if (files.Length > 0 && files[0].Family == FileFamily.Image)
                 {
                     annotator.LoadImage(files[0].FilePath);
-
-                    if (operation.Id == "image-editor" || operation.Category == OperationCategory.Edit)
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Adjust);
-                    }
-                    else
-                    {
-                        annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
-                    }
                 }
+
+                if (operation.Id == "image-editor" || operation.Category == OperationCategory.Edit)
+                {
+                    annotator.SetMode(ImageAnnotationWindow.StudioMode.Adjust);
+                }
+                else
+                {
+                    annotator.SetMode(ImageAnnotationWindow.StudioMode.Markup, ImageAnnotationWindow.AnnotationTool.Pen);
+                }
+
                 annotator.Show();
                 annotator.Activate();
             }

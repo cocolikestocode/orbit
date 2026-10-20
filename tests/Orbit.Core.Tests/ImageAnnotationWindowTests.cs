@@ -19,6 +19,29 @@ public class ImageAnnotationWindowTests : IDisposable
         Directory.CreateDirectory(_tempDir);
     }
 
+    private static void EnsureApplicationResources()
+    {
+        var app = System.Windows.Application.Current ?? new System.Windows.Application();
+        var brushes = new (string Key, System.Windows.Media.Color Color)[]
+        {
+            ("OrbitBackgroundBrush", System.Windows.Media.Color.FromRgb(0x18, 0x19, 0x20)),
+            ("OrbitSurfaceBrush", System.Windows.Media.Color.FromRgb(0x23, 0x25, 0x30)),
+            ("OrbitBorderBrush", System.Windows.Media.Color.FromRgb(0x35, 0x37, 0x45)),
+            ("OrbitAccentBrush", System.Windows.Media.Color.FromRgb(0xFF, 0x7A, 0x1A)),
+            ("OrbitTextPrimaryBrush", System.Windows.Media.Color.FromRgb(0xF8, 0xFA, 0xFC)),
+            ("OrbitTextSecondaryBrush", System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8)),
+            ("OrbitTextMutedBrush", System.Windows.Media.Color.FromRgb(0x64, 0x74, 0x8B)),
+        };
+
+        foreach (var (key, color) in brushes)
+        {
+            if (!app.Resources.Contains(key))
+            {
+                app.Resources[key] = new System.Windows.Media.SolidColorBrush(color);
+            }
+        }
+    }
+
     [Fact]
     public void ImageAnnotationWindow_ShouldInstantiateAndSetCropToolWithoutNullReference()
     {
@@ -28,30 +51,7 @@ public class ImageAnnotationWindowTests : IDisposable
         {
             try
             {
-                // Ensure WPF Application instance exists with merged theme resources
-                if (System.Windows.Application.Current == null)
-                {
-                    var app = new System.Windows.Application();
-                    try
-                    {
-                        var dict = new System.Windows.ResourceDictionary
-                        {
-                            Source = new Uri("pack://application:,,,/Orbit.App;component/Themes/DarkTheme.xaml", UriKind.Absolute)
-                        };
-                        app.Resources.MergedDictionaries.Add(dict);
-                    }
-                    catch
-                    {
-                        // Fallback manual palette
-                        app.Resources["OrbitBackgroundBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x18, 0x19, 0x20));
-                        app.Resources["OrbitSurfaceBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x23, 0x25, 0x30));
-                        app.Resources["OrbitBorderBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x35, 0x37, 0x45));
-                        app.Resources["OrbitAccentBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x7A, 0x1A));
-                        app.Resources["OrbitTextPrimaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF8, 0xFA, 0xFC));
-                        app.Resources["OrbitTextSecondaryBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
-                        app.Resources["OrbitTextMutedBrush"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x64, 0x74, 0x8B));
-                    }
-                }
+                EnsureApplicationResources();
 
                 // 1. Create a dummy image file
                 var imgPath = Path.Combine(_tempDir, "test_ui.png");
@@ -95,19 +95,7 @@ public class ImageAnnotationWindowTests : IDisposable
         {
             try
             {
-                if (System.Windows.Application.Current == null)
-                {
-                    var app = new System.Windows.Application();
-                    try
-                    {
-                        var dict = new System.Windows.ResourceDictionary
-                        {
-                            Source = new Uri("pack://application:,,,/Orbit.App;component/Themes/DarkTheme.xaml", UriKind.Absolute)
-                        };
-                        app.Resources.MergedDictionaries.Add(dict);
-                    }
-                    catch { }
-                }
+                EnsureApplicationResources();
 
                 var imgPath = Path.Combine(_tempDir, "studio_test.png");
                 using (var img = new Image<Rgba32>(120, 80))
@@ -142,6 +130,64 @@ public class ImageAnnotationWindowTests : IDisposable
         thread.Join(TimeSpan.FromSeconds(5));
 
         threadException.Should().BeNull("Image Studio modes and tools should execute cleanly without error");
+    }
+
+    [Fact]
+    public void RadialMenuControl_ShouldAutoSelectAndCommitSingleActionCategory()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+
+                var menu = new Orbit.App.Controls.RadialMenuControl();
+                var op = new Orbit.Core.Models.OperationDefinition
+                {
+                    Id = "image-editor",
+                    Label = "Photo Studio",
+                    Category = Orbit.Core.Models.OperationCategory.Edit,
+                    RequiresWorkspace = true,
+                    InputFormats = [".png"],
+                    EngineId = "orbit.engine.image"
+                };
+
+                var caps = new Orbit.Core.Services.ResolvedCapabilities
+                {
+                    Files = [],
+                    CategorizedOperations = new Dictionary<Orbit.Core.Models.OperationCategory, List<Orbit.Core.Models.OperationDefinition>>
+                    {
+                        [Orbit.Core.Models.OperationCategory.Edit] = new List<Orbit.Core.Models.OperationDefinition> { op }
+                    },
+                    AvailableCategories = [Orbit.Core.Models.OperationCategory.Edit],
+                    IsBatchOperation = false,
+                    IsMixedSelection = false
+                };
+
+                menu.Populate(caps);
+                menu.SelectCategory(Orbit.Core.Models.OperationCategory.Edit);
+
+                Orbit.Core.Models.OperationDefinition? committed = null;
+                menu.ActionCommitted += (action) => committed = action;
+
+                menu.CommitCurrentSelection();
+
+                committed.Should().NotBeNull();
+                committed!.Id.Should().Be("image-editor");
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("RadialMenuControl should auto-select and commit single action categories cleanly");
     }
 
     public void Dispose()

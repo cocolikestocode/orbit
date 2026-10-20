@@ -140,6 +140,11 @@ public partial class RadialMenuControl : UserControl
         }
 
         RenderActionRing(category);
+
+        if (_actionVisuals.Count == 1)
+        {
+            HighlightAction(_actionVisuals[0]);
+        }
     }
 
     private void RenderActionRing(OperationCategory category)
@@ -312,6 +317,13 @@ public partial class RadialMenuControl : UserControl
         {
             ActionCommitted?.Invoke(_activeAction);
         }
+        else if (_activeCategory.HasValue && 
+                 _capabilities != null && 
+                 _capabilities.CategorizedOperations.TryGetValue(_activeCategory.Value, out var ops) && 
+                 ops.Count > 0)
+        {
+            ActionCommitted?.Invoke(ops[0]);
+        }
         else
         {
             MenuCancelled?.Invoke();
@@ -348,6 +360,8 @@ public partial class RadialMenuControl : UserControl
 
     private static bool IsAngleBetween(double angle, double start, double end)
     {
+        if (Math.Abs(end - start) >= 359.9) return true;
+
         double normAngle = NormalizeAngle(angle);
         double normStart = NormalizeAngle(start);
         double normEnd = NormalizeAngle(end);
@@ -365,6 +379,13 @@ public partial class RadialMenuControl : UserControl
 
     private static Path CreateArcSector(double cx, double cy, double innerR, double outerR, double startAngle, double endAngle)
     {
+        double angleDelta = Math.Abs(endAngle - startAngle);
+        if (angleDelta >= 360.0)
+        {
+            endAngle = startAngle + 359.99;
+            angleDelta = 359.99;
+        }
+
         double startRad = startAngle * Math.PI / 180.0;
         double endRad = endAngle * Math.PI / 180.0;
 
@@ -373,7 +394,6 @@ public partial class RadialMenuControl : UserControl
         var p3 = new Point(cx + outerR * Math.Cos(endRad), cy + outerR * Math.Sin(endRad));
         var p4 = new Point(cx + innerR * Math.Cos(endRad), cy + innerR * Math.Sin(endRad));
 
-        double angleDelta = Math.Abs(endAngle - startAngle);
         bool isLargeArc = angleDelta > 180.0;
 
         var figure = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
