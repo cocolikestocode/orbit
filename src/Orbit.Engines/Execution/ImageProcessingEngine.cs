@@ -11,6 +11,7 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Processing;
 
 public class ImageProcessingEngine : IProcessingEngine
@@ -24,7 +25,7 @@ public class ImageProcessingEngine : IProcessingEngine
         return Task.FromResult(new EngineCapabilities
         {
             EngineId = EngineId,
-            SupportedInputFormats = new[] { ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif" },
+            SupportedInputFormats = new[] { ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff", ".tif", ".jfif" },
             SupportedOutputFormats = new[] { ".png", ".jpg", ".webp", ".bmp" },
             SupportedCategories = new[]
             {
@@ -60,7 +61,7 @@ public class ImageProcessingEngine : IProcessingEngine
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var file = request.InputFiles[i];
-                progress.Report(new OperationProgress
+                progress?.Report(new OperationProgress
                 {
                     OperationId = request.OperationId,
                     PercentComplete = (double)i / total * 100.0,
@@ -107,78 +108,141 @@ public class ImageProcessingEngine : IProcessingEngine
     {
         var dir = Path.GetDirectoryName(file.FilePath) ?? Environment.CurrentDirectory;
         var nameWithoutExt = Path.GetFileNameWithoutExtension(file.FilePath);
+        var sourceExt = Path.GetExtension(file.FilePath).ToLowerInvariant();
 
         using var image = await Image.LoadAsync(file.FilePath, cancellationToken);
 
-        string targetExt;
+        string op = operationId.ToLowerInvariant();
+        string targetExt = sourceExt;
         SixLabors.ImageSharp.Formats.IImageEncoder encoder;
 
-        switch (operationId)
+        // 1. Analyze / Info
+        if (op.Contains("analyze") || op.Contains("info") || op.Contains("exif"))
         {
-            case "img-convert-jpg":
-            case "img-png-to-jpg":
-            case "img-webp-to-jpg":
-                targetExt = ".jpg";
-                encoder = new JpegEncoder { Quality = 90 };
-                break;
+            var infoPath = Path.Combine(dir, $"{nameWithoutExt}_image_info.json");
+            var infoJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                FileName = file.FileName,
+                Width = image.Width,
+                Height = image.Height,
+                AspectRatio = (double)image.Width / Math.Max(1, image.Height),
+                ColorType = image.PixelType.BitsPerPixel + " bits",
+                FileSize = file.FileSize,
+                Format = image.Metadata.DecodedImageFormat?.Name ?? sourceExt.TrimStart('.').ToUpperInvariant()
+            }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 
-            case "img-convert-webp":
-            case "img-png-to-webp":
-            case "img-jpg-to-webp":
-                targetExt = ".webp";
-                encoder = new WebpEncoder { Quality = 85 };
-                break;
+            await File.WriteAllTextAsync(infoPath, infoJson, cancellationToken);
+            return infoPath;
+        }
 
-            case "img-convert-png":
-            case "img-jpg-to-png":
-            case "img-webp-to-png":
-                targetExt = ".png";
-                encoder = new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression };
-                break;
+        // 2. Transformations (Rotate, Flip, Resize, Strip)
+        if (op.Contains("rotate-180"))
+        {
+            image.Mutate(x => x.Rotate(180));
+            nameWithoutExt += "_rotated180";
+        }
+        else if (op.Contains("rotate-270"))
+        {
+            image.Mutate(x => x.Rotate(270));
+            nameWithoutExt += "_rotated270";
+        }
+        else if (op.Contains("rotate"))
+        {
+            image.Mutate(x => x.Rotate(90));
+            nameWithoutExt += "_rotated90";
+        }
 
-            case "img-convert-bmp":
-                targetExt = ".bmp";
-                encoder = new BmpEncoder();
-                break;
+        if (op.Contains("flip-v") || op.Contains("flip-vertical"))
+        {
+            image.Mutate(x => x.Flip(FlipMode.Vertical));
+            nameWithoutExt += "_flipped_v";
+        }
+        else if (op.Contains("flip"))
+        {
+            image.Mutate(x => x.Flip(FlipMode.Horizontal));
+            nameWithoutExt += "_flipped_h";
+        }
 
-            case "img-optimize-compress":
-            case "img-compress-lossy":
-                targetExt = Path.GetExtension(file.FilePath).ToLowerInvariant();
-                encoder = targetExt switch
-                {
-                    ".png" => new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression },
-                    ".webp" => new WebpEncoder { Quality = 75 },
-                    _ => new JpegEncoder { Quality = 75 }
-                };
-                nameWithoutExt += "_optimized";
-                break;
+        if (op.Contains("resize-50"))
+        {
+            image.Mutate(x => x.Resize(Math.Max(1, image.Width / 2), Math.Max(1, image.Height / 2)));
+            nameWithoutExt += "_half";
+        }
+        else if (op.Contains("resize-25"))
+        {
+            image.Mutate(x => x.Resize(Math.Max(1, image.Width / 4), Math.Max(1, image.Height / 4)));
+            nameWithoutExt += "_quarter";
+        }
+        else if (op.Contains("resize-75"))
+        {
+            image.Mutate(x => x.Resize(Math.Max(1, (int)(image.Width * 0.75)), Math.Max(1, (int)(image.Height * 0.75))));
+            nameWithoutExt += "_75pct";
+        }
 
-            case "img-edit-rotate-90":
-                image.Mutate(x => x.Rotate(90));
-                targetExt = Path.GetExtension(file.FilePath);
-                encoder = GetEncoderForExtension(targetExt);
-                nameWithoutExt += "_rotated";
-                break;
+        if (op.Contains("strip") || op.Contains("metadata"))
+        {
+            image.Metadata.ExifProfile = null;
+            image.Metadata.IptcProfile = null;
+            image.Metadata.XmpProfile = null;
+            nameWithoutExt += "_clean";
+        }
 
-            case "img-edit-flip-h":
-                image.Mutate(x => x.Flip(FlipMode.Horizontal));
-                targetExt = Path.GetExtension(file.FilePath);
-                encoder = GetEncoderForExtension(targetExt);
-                nameWithoutExt += "_flipped";
-                break;
+        // 3. Format determination
+        bool toJpg = op.EndsWith("to-jpg") || op.EndsWith("to-jpeg") || op.Contains("convert-jpg") || op.Contains("-jpg") ||
+                     string.Equals(explicitOutputFormat, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(explicitOutputFormat, ".jpeg", StringComparison.OrdinalIgnoreCase);
 
-            default:
-                if (!string.IsNullOrEmpty(explicitOutputFormat))
-                {
-                    targetExt = explicitOutputFormat.StartsWith(".") ? explicitOutputFormat : "." + explicitOutputFormat;
-                    encoder = GetEncoderForExtension(targetExt);
-                }
-                else
-                {
-                    targetExt = ".webp";
-                    encoder = new WebpEncoder { Quality = 85 };
-                }
-                break;
+        bool toWebp = op.EndsWith("to-webp") || op.Contains("convert-webp") || op.Contains("-webp") ||
+                      string.Equals(explicitOutputFormat, ".webp", StringComparison.OrdinalIgnoreCase);
+
+        bool toPng = op.EndsWith("to-png") || op.Contains("convert-png") || op.Contains("-png") ||
+                     string.Equals(explicitOutputFormat, ".png", StringComparison.OrdinalIgnoreCase);
+
+        bool toBmp = op.EndsWith("to-bmp") || op.Contains("convert-bmp") || op.Contains("-bmp") ||
+                     string.Equals(explicitOutputFormat, ".bmp", StringComparison.OrdinalIgnoreCase);
+
+        bool isOptimize = op.Contains("optimize") || op.Contains("compress");
+
+        if (toJpg)
+        {
+            targetExt = ".jpg";
+            encoder = new JpegEncoder { Quality = 90 };
+        }
+        else if (toWebp)
+        {
+            targetExt = ".webp";
+            encoder = new WebpEncoder { Quality = 85 };
+        }
+        else if (toPng)
+        {
+            targetExt = ".png";
+            encoder = new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression };
+        }
+        else if (toBmp)
+        {
+            targetExt = ".bmp";
+            encoder = new BmpEncoder();
+        }
+        else if (isOptimize)
+        {
+            targetExt = sourceExt switch
+            {
+                ".png" => ".png",
+                ".webp" => ".webp",
+                _ => ".jpg"
+            };
+            encoder = targetExt switch
+            {
+                ".png" => new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression },
+                ".webp" => new WebpEncoder { Quality = 75 },
+                _ => new JpegEncoder { Quality = 75 }
+            };
+            nameWithoutExt += "_optimized";
+        }
+        else
+        {
+            targetExt = sourceExt;
+            encoder = GetEncoderForExtension(targetExt);
         }
 
         var destination = Path.Combine(dir, $"{nameWithoutExt}{targetExt}");
@@ -195,8 +259,8 @@ public class ImageProcessingEngine : IProcessingEngine
 
     private static SixLabors.ImageSharp.Formats.IImageEncoder GetEncoderForExtension(string ext) => ext.ToLowerInvariant() switch
     {
-        ".jpg" or ".jpeg" => new JpegEncoder { Quality = 90 },
-        ".png" => new PngEncoder(),
+        ".jpg" or ".jpeg" or ".jfif" => new JpegEncoder { Quality = 90 },
+        ".png" => new PngEncoder { CompressionLevel = PngCompressionLevel.DefaultCompression },
         ".bmp" => new BmpEncoder(),
         _ => new WebpEncoder { Quality = 85 }
     };

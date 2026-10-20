@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Orbit.Core.Models;
 using Orbit.Core.Native;
 using Orbit.Core.Services;
@@ -59,11 +60,21 @@ public partial class OverlayWindow : Window
         return IntPtr.Zero;
     }
 
+    private Point ScreenToDip(int screenX, int screenY)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double scaleX = dpi.DpiScaleX > 0 ? dpi.DpiScaleX : 1.0;
+        double scaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1.0;
+        return new Point(screenX / scaleX, screenY / scaleY);
+    }
+
     public void ShowAt(int screenX, int screenY, string[]? files = null)
     {
-        // Center window on cursor
-        Left = screenX - (Width / 2.0);
-        Top = screenY - (Height / 2.0);
+        var dipPt = ScreenToDip(screenX, screenY);
+
+        // Center window on cursor in DIP coordinates
+        Left = dipPt.X - (Width / 2.0);
+        Top = dipPt.Y - (Height / 2.0);
 
         if (files != null && files.Length > 0)
         {
@@ -84,10 +95,16 @@ public partial class OverlayWindow : Window
 
     public void UpdateCursorPosition(int screenX, int screenY)
     {
-        // Convert screen coordinates to local control coordinates
-        double localX = screenX - Left;
-        double localY = screenY - Top;
+        var dipPt = ScreenToDip(screenX, screenY);
+        double localX = dipPt.X - Left;
+        double localY = dipPt.Y - Top;
         RadialMenu.UpdateHoverState(localX, localY);
+    }
+
+    public void CommitAt(int screenX, int screenY)
+    {
+        UpdateCursorPosition(screenX, screenY);
+        RadialMenu.CommitCurrentSelection();
     }
 
     public void ForwardCategoryShortcut(char key)

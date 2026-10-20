@@ -131,6 +131,88 @@ public class EngineExecutionTests : IDisposable
         sortedLines.Should().ContainInOrder("Line A", "Line B", "Line C");
     }
 
+    [Fact]
+    public async Task ImageOperations_WithStandardRegistryIds_ShouldProduceCorrectImageFormat()
+    {
+        var pngPath = Path.Combine(_tempDir, "sample.png");
+        using (var img = new Image<Rgba32>(100, 100))
+        {
+            await img.SaveAsPngAsync(pngPath);
+        }
+
+        var identity = _identifier.Identify(pngPath);
+
+        // Test 1: image-png-to-jpg
+        var reqJpg = new OperationRequest
+        {
+            OperationId = "image-png-to-jpg",
+            InputFiles = new[] { identity }
+        };
+        var resJpg = await _imageEngine.ExecuteAsync(reqJpg, new Progress<OperationProgress>());
+        resJpg.Success.Should().BeTrue();
+        Path.GetExtension(resJpg.OutputFiles![0]).Should().Be(".jpg");
+
+        // Test 2: image-png-to-webp
+        var reqWebp = new OperationRequest
+        {
+            OperationId = "image-png-to-webp",
+            InputFiles = new[] { identity }
+        };
+        var resWebp = await _imageEngine.ExecuteAsync(reqWebp, new Progress<OperationProgress>());
+        resWebp.Success.Should().BeTrue();
+        Path.GetExtension(resWebp.OutputFiles![0]).Should().Be(".webp");
+
+        // Test 3: image-rotate
+        var reqRot = new OperationRequest
+        {
+            OperationId = "image-rotate",
+            InputFiles = new[] { identity }
+        };
+        var resRot = await _imageEngine.ExecuteAsync(reqRot, new Progress<OperationProgress>());
+        resRot.Success.Should().BeTrue();
+        Path.GetFileName(resRot.OutputFiles![0]).Should().Contain("rotated");
+    }
+
+    [Fact]
+    public async Task JobManager_RoutingImageOp_ShouldNeverProduceTextFile()
+    {
+        var pngPath = Path.Combine(_tempDir, "routing_test.png");
+        using (var img = new Image<Rgba32>(32, 32))
+        {
+            await img.SaveAsPngAsync(pngPath);
+        }
+
+        var identity = _identifier.Identify(pngPath);
+
+        var request = new OperationRequest
+        {
+            OperationId = "image-png-to-jpg",
+            InputFiles = new[] { identity }
+        };
+
+        var tcs = new TaskCompletionSource<JobInfo>();
+        _jobManager.JobCompleted += (sender, job) =>
+        {
+            if (job.OperationId == "image-png-to-jpg")
+            {
+                tcs.TrySetResult(job);
+            }
+        };
+
+        await _jobManager.EnqueueAsync(request);
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(4000));
+        completed.Should().Be(tcs.Task);
+
+        var finished = await tcs.Task;
+        finished.Result!.Success.Should().BeTrue();
+        var outPath = finished.Result.OutputFiles![0];
+
+        // MUST be a real JPEG image, NEVER an info.txt!
+        Path.GetExtension(outPath).Should().Be(".jpg");
+        Path.GetExtension(outPath).Should().NotBe(".txt");
+        File.Exists(outPath).Should().BeTrue();
+    }
+
     public void Dispose()
     {
         try

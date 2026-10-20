@@ -26,6 +26,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        DispatcherUnhandledException += (sender, args) =>
+        {
+            System.Diagnostics.Trace.WriteLine($"[Orbit Exception] {args.Exception}");
+            MessageBox.Show($"Orbit encountered an issue: {args.Exception.Message}", "Orbit Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            args.Handled = true;
+        };
+
         var serviceCollection = new ServiceCollection();
         ConfigureServices(serviceCollection);
 
@@ -142,8 +149,10 @@ public partial class App : Application
     {
         Dispatcher.Invoke(() =>
         {
-            // If overlay is active, commit the hovered action
-            _overlayWindow?.UpdateCursorPosition(screenX, screenY);
+            if (_overlayWindow != null && _overlayWindow.IsVisible)
+            {
+                _overlayWindow.CommitAt(screenX, screenY);
+            }
         });
     }
 
@@ -151,26 +160,50 @@ public partial class App : Application
     {
         if (_serviceProvider == null) return;
 
-        // 1. If an annotation / workspace operation is selected, open ImageAnnotationWindow
-        if (operation.Category == OperationCategory.Annotate || operation.RequiresWorkspace || operation.Id.StartsWith("image-annotate"))
+        bool isImageWorkspace = 
+            operation.Category == OperationCategory.Annotate || 
+            operation.Id == "image-crop" || 
+            operation.Id.StartsWith("image-annotate") ||
+            (operation.RequiresWorkspace && files.Length > 0 && files[0].Family == FileFamily.Image);
+
+        // 1. If an image annotation / crop workspace operation is selected, open ImageAnnotationWindow
+        if (isImageWorkspace)
         {
-            var annotator = _serviceProvider.GetRequiredService<ImageAnnotationWindow>();
-            if (files.Length > 0)
+            try
             {
-                annotator.LoadImage(files[0].FilePath);
+                var annotator = _serviceProvider.GetRequiredService<ImageAnnotationWindow>();
+                if (files.Length > 0 && files[0].Family == FileFamily.Image)
+                {
+                    annotator.LoadImage(files[0].FilePath);
+                    if (operation.Id == "image-crop")
+                    {
+                        annotator.SetTool(ImageAnnotationWindow.AnnotationTool.Crop);
+                    }
+                }
+                annotator.Show();
+                annotator.Activate();
             }
-            annotator.Show();
-            annotator.Activate();
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open Annotator: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
             return;
         }
 
         // 2. If multiple files are selected, open BatchOperationsWindow
         if (files.Length > 1)
         {
-            var batchWindow = _serviceProvider.GetRequiredService<BatchOperationsWindow>();
-            batchWindow.SetBatch(operation, files);
-            batchWindow.Show();
-            batchWindow.Activate();
+            try
+            {
+                var batchWindow = _serviceProvider.GetRequiredService<BatchOperationsWindow>();
+                batchWindow.SetBatch(operation, files);
+                batchWindow.Show();
+                batchWindow.Activate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open Batch Operations: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
             return;
         }
 

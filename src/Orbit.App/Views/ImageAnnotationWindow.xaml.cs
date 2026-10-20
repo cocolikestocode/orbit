@@ -153,6 +153,11 @@ public partial class ImageAnnotationWindow : Window
         UpdateToolSelection(tool);
     }
 
+    public void SetTool(AnnotationTool tool)
+    {
+        UpdateToolSelection(tool);
+    }
+
     private void UpdateToolSelection(AnnotationTool tool)
     {
         _currentTool = tool;
@@ -638,13 +643,20 @@ public partial class ImageAnnotationWindow : Window
         double w = cropMarquee.Width;
         double h = cropMarquee.Height;
 
-        if (w < 10 || h < 10 || BaseImageElement.Source is not BitmapSource src) return;
+        if (BaseImageElement.Source is not BitmapSource src) return;
+
+        int cx = Math.Max(0, (int)x);
+        int cy = Math.Max(0, (int)y);
+        int cw = Math.Min(src.PixelWidth - cx, (int)w);
+        int ch = Math.Min(src.PixelHeight - cy, (int)h);
+
+        if (cw < 10 || ch < 10) return;
 
         try
         {
-            var cropped = new CroppedBitmap(src, new Int32Rect((int)x, (int)y, (int)w, (int)h));
+            var cropped = new CroppedBitmap(src, new Int32Rect(cx, cy, cw, ch));
             ApplyBitmap(cropped, IOPath.GetFileName(_currentImagePath ?? "Cropped"));
-            TxtStatusMessage.Text = $"Cropped canvas to {(int)w} × {(int)h}";
+            TxtStatusMessage.Text = $"Cropped canvas to {cw} × {ch}";
         }
         catch (Exception ex)
         {

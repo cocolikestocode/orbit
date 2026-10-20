@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Orbit.App.Controls"
         Title="Orbit Overlay"
-        Width="560" Height="560"
+        Width="540" Height="540"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -11,7 +11,7 @@
         ShowInTaskbar="False"
         WindowStartupLocation="Manual"
         AllowDrop="True">
-    <Grid Width="560" Height="560">
+    <Grid Width="540" Height="540" Background="#01000000">
         <controls:RadialMenuControl x:Name="RadialMenu" HorizontalAlignment="Center" VerticalAlignment="Center" />
     </Grid>
 </Window>

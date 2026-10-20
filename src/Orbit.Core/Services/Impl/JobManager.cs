@@ -51,8 +51,8 @@ public class JobManager : IJobManager
     {
         try
         {
-            // Find engine by EngineId prefix, category prefix, or validation
-            var engine = ResolveEngine(job.Request.OperationId);
+            // Find engine by EngineId prefix, category prefix, or file family
+            var engine = ResolveEngine(job.Request);
 
             if (engine == null)
             {
@@ -144,14 +144,17 @@ public class JobManager : IJobManager
         }
     }
 
-    private IProcessingEngine? ResolveEngine(string operationId)
+    private IProcessingEngine? ResolveEngine(OperationRequest request)
     {
+        string operationId = request.OperationId;
+
         // 1. Direct match by EngineId prefix
         var direct = _engines.FirstOrDefault(e => operationId.StartsWith(e.EngineId, StringComparison.OrdinalIgnoreCase));
         if (direct != null) return direct;
 
         // 2. Standard prefix mapping
-        if (operationId.StartsWith("img-", StringComparison.OrdinalIgnoreCase))
+        if (operationId.StartsWith("img-", StringComparison.OrdinalIgnoreCase) ||
+            operationId.StartsWith("image-", StringComparison.OrdinalIgnoreCase))
         {
             var imgEngine = _engines.FirstOrDefault(e => e.EngineId.Equals("image", StringComparison.OrdinalIgnoreCase));
             if (imgEngine != null) return imgEngine;
@@ -172,19 +175,39 @@ public class JobManager : IJobManager
             if (mediaEngine != null) return mediaEngine;
         }
 
-        if (operationId.StartsWith("archive-", StringComparison.OrdinalIgnoreCase))
+        if (operationId.StartsWith("archive-", StringComparison.OrdinalIgnoreCase) ||
+            operationId.StartsWith("zip-", StringComparison.OrdinalIgnoreCase))
         {
             var archiveEngine = _engines.FirstOrDefault(e => e.EngineId.Equals("archive", StringComparison.OrdinalIgnoreCase));
             if (archiveEngine != null) return archiveEngine;
         }
 
-        if (operationId.StartsWith("text-", StringComparison.OrdinalIgnoreCase))
+        if (operationId.StartsWith("text-", StringComparison.OrdinalIgnoreCase) ||
+            operationId.StartsWith("data-", StringComparison.OrdinalIgnoreCase) ||
+            operationId.StartsWith("code-", StringComparison.OrdinalIgnoreCase))
         {
             var textEngine = _engines.FirstOrDefault(e => e.EngineId.Equals("text", StringComparison.OrdinalIgnoreCase));
             if (textEngine != null) return textEngine;
         }
 
-        // 3. Fallback to any available engine
+        // 3. Fallback based on input file family
+        if (request.InputFiles.Length > 0)
+        {
+            var family = request.InputFiles[0].Family;
+            var familyEngine = family switch
+            {
+                FileFamily.Image => _engines.FirstOrDefault(e => e.EngineId.Equals("image", StringComparison.OrdinalIgnoreCase)),
+                FileFamily.Document => _engines.FirstOrDefault(e => e.EngineId is "document" or "pdf"),
+                FileFamily.Video or FileFamily.Audio => _engines.FirstOrDefault(e => e.EngineId.Equals("media", StringComparison.OrdinalIgnoreCase)),
+                FileFamily.Archive => _engines.FirstOrDefault(e => e.EngineId.Equals("archive", StringComparison.OrdinalIgnoreCase)),
+                FileFamily.Text or FileFamily.Code or FileFamily.Data => _engines.FirstOrDefault(e => e.EngineId.Equals("text", StringComparison.OrdinalIgnoreCase)),
+                _ => null
+            };
+
+            if (familyEngine != null) return familyEngine;
+        }
+
+        // 4. Fallback to any available engine
         return _engines.FirstOrDefault(e => e.IsAvailable);
     }
 }

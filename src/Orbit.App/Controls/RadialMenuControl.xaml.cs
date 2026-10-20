@@ -229,6 +229,7 @@ public partial class RadialMenuControl : UserControl
         // Check Category Ring
         if (distance >= CategoryInnerRadius && distance <= CategoryOuterRadius)
         {
+            ClearActionHighlight();
             foreach (var visual in _categoryVisuals)
             {
                 if (IsAngleBetween(angle, visual.StartAngle, visual.EndAngle))
@@ -244,19 +245,45 @@ public partial class RadialMenuControl : UserControl
         // Check Action Ring
         else if (distance >= ActionInnerRadius && distance <= ActionOuterRadius)
         {
+            bool foundAction = false;
             foreach (var visual in _actionVisuals)
             {
                 if (IsAngleBetween(angle, visual.StartAngle, visual.EndAngle))
                 {
                     HighlightAction(visual);
-                    return;
+                    foundAction = true;
+                    break;
                 }
             }
+
+            if (!foundAction)
+            {
+                ClearActionHighlight();
+            }
+        }
+        else
+        {
+            // Outside of action/category bounds (cancel/neutral zone)
+            ClearActionHighlight();
+        }
+    }
+
+    public void ClearActionHighlight()
+    {
+        _activeAction = null;
+        HoverInfoCard.Visibility = Visibility.Collapsed;
+
+        foreach (var v in _actionVisuals)
+        {
+            v.Path.Fill = new SolidColorBrush(Color.FromArgb(0xD5, 0x28, 0x2B, 0x38));
+            v.Text.Foreground = new SolidColorBrush(Color.FromRgb(0xF0, 0xF2, 0xFA));
         }
     }
 
     private void HighlightAction(ActionSectorVisual visual)
     {
+        if (_activeAction == visual.Operation) return; // already active
+
         _activeAction = visual.Operation;
 
         foreach (var v in _actionVisuals)
@@ -314,19 +341,11 @@ public partial class RadialMenuControl : UserControl
 
     private static bool IsAngleBetween(double angle, double start, double end)
     {
-        // Normalize all angles to [0, 360)
-        double normAngle = (angle % 360 + 360) % 360;
-        double normStart = (start % 360 + 360) % 360;
-        double normEnd = (end % 360 + 360) % 360;
+        double diff = (end - start + 360) % 360;
+        if (diff == 0) diff = 360; // full circle
 
-        if (normStart < normEnd)
-        {
-            return normAngle >= normStart && normAngle < normEnd;
-        }
-        else
-        {
-            return normAngle >= normStart || normAngle < normEnd;
-        }
+        double relative = (angle - start + 360) % 360;
+        return relative >= 0 && relative < diff;
     }
 
     private static Path CreateArcSector(double cx, double cy, double innerR, double outerR, double startAngle, double endAngle)
