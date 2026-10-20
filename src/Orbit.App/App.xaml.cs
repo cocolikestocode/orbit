@@ -1,3 +1,5 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Orbit.Core.Tests")]
+
 namespace Orbit.App;
 
 using System;
@@ -99,6 +101,8 @@ public partial class App : Application
 
         // Dedicated UI Workspaces
         services.AddTransient<ImageAnnotationWindow>();
+        services.AddTransient<PdfStudioWindow>();
+        services.AddTransient<CompressorStudioWindow>();
         services.AddTransient<BatchOperationsWindow>();
         services.AddTransient<SettingsWindow>();
     }
@@ -161,23 +165,24 @@ public partial class App : Application
         if (_serviceProvider == null) return;
         files ??= Array.Empty<FileIdentity>();
 
-        bool isImageWorkspace = 
-            operation.Category == OperationCategory.Annotate || 
-            operation.Category == OperationCategory.Edit || 
-            operation.Id == "image-crop" || 
-            operation.Id == "image-editor" ||
-            operation.Id == "image-adjust" ||
-            operation.Id == "image-add-watermark" ||
-            operation.Id.StartsWith("image-annotate") ||
-            (operation.RequiresWorkspace && (files.Length == 0 || files[0].Family == FileFamily.Image));
+        bool isImage = files.Length > 0 && files[0].Family == FileFamily.Image;
+        bool isPdf = files.Length > 0 && (files[0].Family == FileFamily.Document || files[0].Extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase));
 
-        // 1. If an image studio / annotation / crop workspace operation is selected, open ImageAnnotationWindow
-        if (isImageWorkspace)
+        // 1. If an image studio / annotation / crop workspace operation is selected on an image, open ImageAnnotationWindow
+        if ((isImage || files.Length == 0) &&
+            (operation.Category == OperationCategory.Annotate || 
+             operation.Category == OperationCategory.Edit || 
+             operation.Id == "image-crop" || 
+             operation.Id == "image-editor" ||
+             operation.Id == "image-adjust" ||
+             operation.Id == "image-add-watermark" ||
+             operation.Id.StartsWith("image-annotate") ||
+             (operation.RequiresWorkspace && isImage)))
         {
             try
             {
                 var annotator = _serviceProvider.GetRequiredService<ImageAnnotationWindow>();
-                if (files.Length > 0 && files[0].Family == FileFamily.Image)
+                if (isImage)
                 {
                     annotator.LoadImage(files[0].FilePath);
                 }
@@ -201,7 +206,67 @@ public partial class App : Application
             return;
         }
 
-        // 2. If multiple files are selected, open BatchOperationsWindow
+        // 2. If a PDF document workspace (Edit, Annotate, Reorder) is selected on a PDF, open PdfStudioWindow
+        if (isPdf &&
+            (operation.RequiresWorkspace ||
+             operation.Id == "doc-reorder-pages" ||
+             operation.Id == "doc-edit-pdf" ||
+             operation.Category == OperationCategory.Annotate))
+        {
+            try
+            {
+                var pdfStudio = _serviceProvider.GetRequiredService<PdfStudioWindow>();
+                pdfStudio.LoadPdf(files[0].FilePath);
+                pdfStudio.Show();
+                pdfStudio.Activate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open PDF Studio: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return;
+        }
+
+        // 3. If an Optimize / Compress operation is selected, open CompressorStudioWindow
+        if (operation.Category == OperationCategory.Optimize ||
+            operation.Id == "image-compress" ||
+            operation.Id == "doc-compress-pdf" ||
+            operation.Id == "video-compress" ||
+            operation.Id == "archive-compress")
+        {
+            try
+            {
+                var compressorStudio = _serviceProvider.GetRequiredService<CompressorStudioWindow>();
+                if (files.Length > 0)
+                {
+                    compressorStudio.LoadFile(files[0].FilePath);
+                }
+                compressorStudio.Show();
+                compressorStudio.Activate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open Compression Studio: {ex.Message}", "Orbit", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return;
+        }
+
+        // 4. Password Protection & Decryption prompts
+        string? password = null;
+        if (operation.Id == "doc-encrypt-pdf" || operation.Id == "sec-encrypt-file")
+        {
+            var (confirmed, pwd) = PasswordInputDialog.Prompt("Protect Document", "Set an encryption password for this file:");
+            if (!confirmed) return;
+            password = pwd;
+        }
+        else if (operation.Id == "doc-decrypt-pdf" || operation.Id == "sec-decrypt-file")
+        {
+            var (confirmed, pwd) = PasswordInputDialog.Prompt("Unlock Document", "Enter password to decrypt this file:");
+            if (!confirmed) return;
+            password = pwd;
+        }
+
+        // 5. If multiple files are selected, open BatchOperationsWindow
         if (files.Length > 1)
         {
             try
@@ -218,7 +283,7 @@ public partial class App : Application
             return;
         }
 
-        // 3. Otherwise standard single-file direct job execution
+        // 6. Otherwise standard single-file direct job execution
         var jobManager = _serviceProvider.GetRequiredService<IJobManager>();
         var request = new OperationRequest
         {
@@ -226,6 +291,11 @@ public partial class App : Application
             InputFiles = files,
             OutputFormat = operation.OutputFormats?.FirstOrDefault()
         };
+
+        if (!string.IsNullOrEmpty(password))
+        {
+            request.Parameters["password"] = password;
+        }
 
         try
         {

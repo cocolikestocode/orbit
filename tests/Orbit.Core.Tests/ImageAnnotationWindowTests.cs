@@ -3,6 +3,7 @@ namespace Orbit.Core.Tests;
 using System;
 using System.IO;
 using System.Threading;
+using System.Windows;
 using FluentAssertions;
 using Orbit.App.Views;
 using SixLabors.ImageSharp;
@@ -188,6 +189,119 @@ public class ImageAnnotationWindowTests : IDisposable
         thread.Join(TimeSpan.FromSeconds(5));
 
         threadException.Should().BeNull("RadialMenuControl should auto-select and commit single action categories cleanly");
+    }
+
+    [Fact]
+    public void ImageAnnotationWindow_ShouldShowCropperOverlayAndUndoCropCleanly()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+
+                var imgPath = Path.Combine(_tempDir, "crop_undo_test.png");
+                using (var img = new Image<Rgba32>(200, 200))
+                {
+                    img.SaveAsPng(imgPath);
+                }
+
+                var window = new ImageAnnotationWindow();
+                window.LoadImage(imgPath);
+
+                // Enter crop mode -> overlay should be visible
+                window.SetTool(ImageAnnotationWindow.AnnotationTool.Crop);
+                window.CropLayerCanvas.Visibility.Should().Be(System.Windows.Visibility.Visible);
+
+                // Commit crop
+                window.OnApplyCropClicked(this, new RoutedEventArgs());
+                window.CropLayerCanvas.Visibility.Should().Be(System.Windows.Visibility.Collapsed);
+
+                // Undo crop -> should restore
+                window.OnUndoClicked(this, new RoutedEventArgs());
+
+                // Redo crop -> should re-crop
+                window.OnRedoClicked(this, new RoutedEventArgs());
+
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("ImageAnnotationWindow should support freeform crop overlay and bitmap undo/redo");
+    }
+
+    [Fact]
+    public void PdfStudioWindow_ShouldInstantiateCleanly()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+                var window = new PdfStudioWindow();
+                window.Should().NotBeNull();
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("PdfStudioWindow should instantiate cleanly");
+    }
+
+    [Fact]
+    public void CompressorStudioWindow_ShouldInstantiateAndLoadFile()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+
+                var imgPath = Path.Combine(_tempDir, "compress_test.png");
+                using (var img = new Image<Rgba32>(100, 100))
+                {
+                    img.SaveAsPng(imgPath);
+                }
+
+                var window = new CompressorStudioWindow();
+                window.LoadFile(imgPath);
+                window.TxtOriginalSize.Text.Should().NotBeNullOrEmpty();
+                window.TxtEstimatedSize.Text.Should().NotBeNullOrEmpty();
+
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("CompressorStudioWindow should instantiate and calculate estimates");
     }
 
     public void Dispose()

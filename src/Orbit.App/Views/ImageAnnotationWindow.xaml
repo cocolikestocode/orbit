@@ -280,24 +280,95 @@
                     <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="36">
                         <!-- Canvas with natural pixel dimensions and scale transform -->
                         <Border BorderBrush="#2D313E" BorderThickness="1" CornerRadius="2">
-                            <Canvas x:Name="DrawingCanvas"
-                                    Width="800" Height="600"
-                                    Background="Transparent"
-                                    MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
-                                    MouseMove="OnCanvasMouseMove"
-                                    MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
-                                <Canvas.Effect>
-                                    <DropShadowEffect BlurRadius="28" ShadowDepth="4" Opacity="0.55" Color="#000000"/>
-                                </Canvas.Effect>
-                                <Canvas.LayoutTransform>
+                            <Grid>
+                                <Grid.LayoutTransform>
                                     <ScaleTransform x:Name="CanvasScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
-                                </Canvas.LayoutTransform>
+                                </Grid.LayoutTransform>
 
-                                <!-- Base Image Render Target -->
-                                <Image x:Name="BaseImageElement" Stretch="None"/>
+                                <Canvas x:Name="DrawingCanvas"
+                                        Width="800" Height="600"
+                                        Background="Transparent"
+                                        MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
+                                        MouseMove="OnCanvasMouseMove"
+                                        MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
+                                    <Canvas.Effect>
+                                        <DropShadowEffect BlurRadius="28" ShadowDepth="4" Opacity="0.55" Color="#000000"/>
+                                    </Canvas.Effect>
 
-                                <!-- Active Annotation Elements & Watermarks reside as children here -->
-                            </Canvas>
+                                    <!-- Base Image Render Target -->
+                                    <Image x:Name="BaseImageElement" Stretch="None"/>
+
+                                    <!-- Active Annotation Elements & Watermarks reside as children here -->
+                                </Canvas>
+
+                                <!-- Dedicated Freeform Cropper Layer -->
+                                <Canvas x:Name="CropLayerCanvas"
+                                        Width="800" Height="600"
+                                        Visibility="Collapsed"
+                                        Background="Transparent"
+                                        ClipToBounds="False"
+                                        MouseDown="OnCropLayerMouseDown"
+                                        MouseMove="OnCropLayerMouseMove"
+                                        MouseUp="OnCropLayerMouseUp">
+                                    <!-- 4 Shroud Overlays -->
+                                    <Rectangle x:Name="CropShroudTop" Fill="#85000000"/>
+                                    <Rectangle x:Name="CropShroudBottom" Fill="#85000000"/>
+                                    <Rectangle x:Name="CropShroudLeft" Fill="#85000000"/>
+                                    <Rectangle x:Name="CropShroudRight" Fill="#85000000"/>
+
+                                    <!-- Interactive Crop Box with Grid -->
+                                    <Border x:Name="CropBoxBorder"
+                                            BorderBrush="#FF7A1A"
+                                            BorderThickness="2"
+                                            Background="#01FFFFFF"
+                                            Cursor="SizeAll">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="#40FFFFFF" BorderThickness="0,0,0,1"/>
+                                            <Border Grid.Row="1" Grid.ColumnSpan="3" BorderBrush="#40FFFFFF" BorderThickness="0,0,0,1"/>
+                                            <Border Grid.Column="0" Grid.RowSpan="3" BorderBrush="#40FFFFFF" BorderThickness="0,0,1,0"/>
+                                            <Border Grid.Column="1" Grid.RowSpan="3" BorderBrush="#40FFFFFF" BorderThickness="0,0,1,0"/>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Corner Handles -->
+                                    <Border x:Name="CropHandleTL" Width="14" Height="14" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="2" Cursor="SizeNWSE"/>
+                                    <Border x:Name="CropHandleTR" Width="14" Height="14" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="2" Cursor="SizeNESW"/>
+                                    <Border x:Name="CropHandleBL" Width="14" Height="14" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="2" Cursor="SizeNESW"/>
+                                    <Border x:Name="CropHandleBR" Width="14" Height="14" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="2" Cursor="SizeNWSE"/>
+
+                                    <!-- Edge Handles -->
+                                    <Border x:Name="CropHandleT" Width="24" Height="8" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="1.5" Cursor="SizeNS"/>
+                                    <Border x:Name="CropHandleB" Width="24" Height="8" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="1.5" Cursor="SizeNS"/>
+                                    <Border x:Name="CropHandleL" Width="8" Height="24" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="1.5" Cursor="SizeWE"/>
+                                    <Border x:Name="CropHandleR" Width="8" Height="24" CornerRadius="2" Background="White" BorderBrush="#FF7A1A" BorderThickness="1.5" Cursor="SizeWE"/>
+
+                                    <!-- Floating Crop Action Pill -->
+                                    <Border x:Name="CropActionBar" Background="#1E202B" BorderBrush="#3D4052" BorderThickness="1" CornerRadius="8" Padding="10,6">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.55" Color="#000000"/>
+                                        </Border.Effect>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock x:Name="TxtCropDims" Text="800 × 600 px" Foreground="#CBD5E1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                            <Button Content="✕ Cancel" Width="74" Height="28" Background="#2A2C38" Foreground="#CBD5E1" BorderBrush="#3D4052" BorderThickness="1" FontSize="11" Cursor="Hand" Click="OnCancelCropClicked" Margin="0,0,6,0">
+                                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="5"/></Style></Button.Resources>
+                                            </Button>
+                                            <Button Content="✓ Apply Crop" Width="96" Height="28" Background="#FF7A1A" Foreground="White" BorderThickness="0" FontSize="11" FontWeight="SemiBold" Cursor="Hand" Click="OnApplyCropClicked">
+                                                <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="5"/></Style></Button.Resources>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </Canvas>
+                            </Grid>
                         </Border>
                     </Grid>
                 </ScrollViewer>

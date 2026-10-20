@@ -317,13 +317,6 @@ public partial class RadialMenuControl : UserControl
         {
             ActionCommitted?.Invoke(_activeAction);
         }
-        else if (_activeCategory.HasValue && 
-                 _capabilities != null && 
-                 _capabilities.CategorizedOperations.TryGetValue(_activeCategory.Value, out var ops) && 
-                 ops.Count > 0)
-        {
-            ActionCommitted?.Invoke(ops[0]);
-        }
         else
         {
             MenuCancelled?.Invoke();

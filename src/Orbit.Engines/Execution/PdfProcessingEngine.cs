@@ -120,6 +120,12 @@ public class PdfProcessingEngine : IProcessingEngine
                         }
 
                         case "doc-pdf-to-images":
+                        {
+                            var imgs = await RenderPdfToImagesAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            outputFiles.AddRange(imgs);
+                            break;
+                        }
+
                         case "doc-extract-images":
                         {
                             var imgs = await ExtractImagesFromPdfAsync(file.FilePath, request.OutputDirectory, cancellationToken);
@@ -157,14 +163,20 @@ public class PdfProcessingEngine : IProcessingEngine
 
                         case "doc-encrypt-pdf":
                         {
-                            var encrypted = await EncryptPdfAsync(file.FilePath, "OrbitSecure123", request.OutputDirectory, cancellationToken);
+                            var pwd = request.Parameters.TryGetValue("password", out var pObj) && pObj is string s && !string.IsNullOrWhiteSpace(s)
+                                ? s
+                                : "OrbitSecure123";
+                            var encrypted = await EncryptPdfAsync(file.FilePath, pwd, request.OutputDirectory, cancellationToken);
                             outputFiles.Add(encrypted);
                             break;
                         }
 
                         case "doc-decrypt-pdf":
                         {
-                            var decrypted = await CompressPdfAsync(file.FilePath, request.OutputDirectory, cancellationToken);
+                            var pwd = request.Parameters.TryGetValue("password", out var pObj) && pObj is string s && !string.IsNullOrWhiteSpace(s)
+                                ? s
+                                : "";
+                            var decrypted = await DecryptPdfAsync(file.FilePath, pwd, request.OutputDirectory, cancellationToken);
                             outputFiles.Add(decrypted);
                             break;
                         }
@@ -182,6 +194,39 @@ public class PdfProcessingEngine : IProcessingEngine
                         {
                             var results = await ConvertMarkdownAsync(file.FilePath, normalizedOp, request.OutputDirectory, cancellationToken);
                             outputFiles.AddRange(results);
+                            break;
+                        }
+
+                        case "doc-txt-to-pdf":
+                        {
+                            var text = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
+                            var dir = request.OutputDirectory ?? Path.GetDirectoryName(file.FilePath) ?? Environment.CurrentDirectory;
+                            Directory.CreateDirectory(dir);
+                            var baseName = Path.GetFileNameWithoutExtension(file.FilePath);
+                            var pdfPath = Path.Combine(dir, $"{baseName}.pdf");
+
+                            var rawLines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                            var pages = new List<string>();
+                            var pageSb = new StringBuilder();
+                            int count = 0;
+                            foreach (var l in rawLines)
+                            {
+                                pageSb.AppendLine(l);
+                                count++;
+                                if (count >= 45)
+                                {
+                                    pages.Add(pageSb.ToString());
+                                    pageSb.Clear();
+                                    count = 0;
+                                }
+                            }
+                            if (pageSb.Length > 0 || pages.Count == 0)
+                            {
+                                pages.Add(pageSb.ToString());
+                            }
+
+                            await WriteSimplePdfDocumentAsync(pdfPath, pages, baseName, cancellationToken);
+                            outputFiles.Add(pdfPath);
                             break;
                         }
 
@@ -561,6 +606,54 @@ public class PdfProcessingEngine : IProcessingEngine
         inDoc.SecuritySettings.OwnerPassword = password + "_admin";
         inDoc.Save(outPath);
         return await Task.FromResult(outPath);
+    }
+
+    public static async Task<string> DecryptPdfAsync(
+        string pdfPath,
+        string password,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+        var outPath = Path.Combine(targetDir, $"{baseName}_unlocked.pdf");
+
+        using var inDoc = string.IsNullOrEmpty(password)
+            ? PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify)
+            : PdfReader.Open(pdfPath, password, PdfDocumentOpenMode.Modify);
+
+        inDoc.SecuritySettings.UserPassword = "";
+        inDoc.SecuritySettings.OwnerPassword = "";
+        inDoc.Save(outPath);
+        return await Task.FromResult(outPath);
+    }
+
+    public static async Task<List<string>> RenderPdfToImagesAsync(
+        string pdfPath,
+        string? outputDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<string>();
+        var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+        var baseName = Path.GetFileNameWithoutExtension(pdfPath);
+
+        await Task.Run(() =>
+        {
+            using var fileStream = File.OpenRead(pdfPath);
+            int pageCount = PDFtoImage.Conversion.GetPageCount(fileStream);
+            for (int i = 0; i < pageCount; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var outPath = Path.Combine(targetDir, $"{baseName}_page_{i + 1}.png");
+                using var outStream = File.Create(outPath);
+                PDFtoImage.Conversion.SavePng(outStream, fileStream, page: i, options: new PDFtoImage.RenderOptions(300));
+                results.Add(outPath);
+            }
+        }, cancellationToken);
+
+        return results;
     }
 
     public static async Task<string> SignPdfAsync(

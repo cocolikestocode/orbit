@@ -264,9 +264,10 @@ public class TextDataProcessingEngine : IProcessingEngine
                 else if (op.Contains("sort"))
                 {
                     var lines = await File.ReadAllLinesAsync(file.FilePath, cancellationToken);
-                    Array.Sort(lines, StringComparer.OrdinalIgnoreCase);
+                    var sortedLines = lines.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                    Array.Sort(sortedLines, StringComparer.OrdinalIgnoreCase);
                     var sortedPath = Path.Combine(dir, $"{baseName}_sorted{file.Extension}");
-                    await File.WriteAllLinesAsync(sortedPath, lines, cancellationToken);
+                    await File.WriteAllLinesAsync(sortedPath, sortedLines, cancellationToken);
                     outputFiles.Add(sortedPath);
                 }
                 // 11. Base64 Encode / Decode

@@ -108,6 +108,22 @@ public static class DocumentOperations
                 IconGlyph = "\uE774",
                 Priority = 15
             },
+            new()
+            {
+                Id = "doc-txt-to-pdf",
+                Label = "Convert Text to PDF",
+                Description = "Render plain text document into a clean, paginated PDF file.",
+                Category = OperationCategory.Convert,
+                InputFormats = [".txt", ".text", ".log"],
+                OutputFormats = [".pdf"],
+                SupportsBatch = true,
+                ModifiesOriginal = false,
+                RequiresWorkspace = false,
+                RequiresConfirmation = false,
+                EngineId = "document",
+                IconGlyph = "\uEA90",
+                Priority = 16
+            },
 
             // === Edit ===
             new()

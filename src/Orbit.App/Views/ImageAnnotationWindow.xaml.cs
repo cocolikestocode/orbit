@@ -118,7 +118,7 @@ public partial class ImageAnnotationWindow : Window
         SetDirty(false);
     }
 
-    private void ApplyBitmap(BitmapSource bitmap, string displayName)
+    private void ApplyBitmap(BitmapSource bitmap, string displayName, bool clearAnnotations = true)
     {
         if (bitmap == null) return;
         if (BaseImageElement == null || DrawingCanvas == null) return;
@@ -127,7 +127,10 @@ public partial class ImageAnnotationWindow : Window
         DrawingCanvas.Width = bitmap.PixelWidth;
         DrawingCanvas.Height = bitmap.PixelHeight;
 
-        ClearCanvasAnnotations();
+        if (clearAnnotations)
+        {
+            ClearCanvasAnnotations();
+        }
 
         if (TxtImageMeta != null) TxtImageMeta.Text = $"{displayName} • {bitmap.PixelWidth} × {bitmap.PixelHeight} px";
         if (EmptyStatePrompt != null) EmptyStatePrompt.Visibility = Visibility.Collapsed;
@@ -265,6 +268,15 @@ public partial class ImageAnnotationWindow : Window
     {
         _currentTool = tool;
         UpdateToolSelection(tool);
+
+        if (tool == AnnotationTool.Crop)
+        {
+            ShowCropOverlay();
+        }
+        else
+        {
+            HideCropOverlay();
+        }
     }
 
     private void OnModeTabClicked(object sender, RoutedEventArgs e)
@@ -463,6 +475,11 @@ public partial class ImageAnnotationWindow : Window
             return;
         }
 
+        if (_currentTool == AnnotationTool.Crop)
+        {
+            return;
+        }
+
         _isDrawing = true;
         _startPoint = pos;
         _currentVisual = CreateDrawingVisual(_currentTool, _startPoint);
@@ -535,19 +552,11 @@ public partial class ImageAnnotationWindow : Window
         }
         else if (dist > 4.0)
         {
-            if (_currentTool == AnnotationTool.Crop)
-            {
-                ApplyCropSelection(_currentVisual);
-                DrawingCanvas.Children.Remove(_currentVisual);
-            }
-            else
-            {
-                _undoStack.Push(_currentVisual);
-                _redoStack.Clear();
-                UpdateUndoRedoState();
-                SelectElement(_currentVisual);
-                SetDirty(true);
-            }
+            _undoStack.Push(_currentVisual);
+            _redoStack.Clear();
+            UpdateUndoRedoState();
+            SelectElement(_currentVisual);
+            SetDirty(true);
         }
         else
         {
@@ -936,35 +945,298 @@ public partial class ImageAnnotationWindow : Window
         SetDirty(true);
     }
 
+    #endregion
+
+    #region Interactive Freeform Cropper Overlay
+
+    private enum CropDragMode
+    {
+        None,
+        Move,
+        TopLeft,
+        Top,
+        TopRight,
+        Right,
+        BottomRight,
+        Bottom,
+        BottomLeft,
+        Left
+    }
+
+    private CropDragMode _cropDragMode = CropDragMode.None;
+    private Point _cropDragStartPoint;
+    private Rect _cropInitialRect;
+    private Rect _cropCurrentRect;
+
+    public void ShowCropOverlay()
+    {
+        if (BaseImageElement.Source is not BitmapSource src) return;
+
+        CropLayerCanvas.Visibility = Visibility.Visible;
+        CropLayerCanvas.Width = DrawingCanvas.Width;
+        CropLayerCanvas.Height = DrawingCanvas.Height;
+
+        if (_cropCurrentRect.Width <= 0 || _cropCurrentRect.Height <= 0 ||
+            _cropCurrentRect.Width > DrawingCanvas.Width || _cropCurrentRect.Height > DrawingCanvas.Height)
+        {
+            double padX = Math.Max(20, DrawingCanvas.Width * 0.08);
+            double padY = Math.Max(20, DrawingCanvas.Height * 0.08);
+            _cropCurrentRect = new Rect(padX, padY, Math.Max(40, DrawingCanvas.Width - 2 * padX), Math.Max(40, DrawingCanvas.Height - 2 * padY));
+        }
+
+        UpdateCropOverlayVisuals();
+        if (TxtStatusMessage != null) TxtStatusMessage.Text = "Crop: Drag box or handles to size freely. Press Enter or Apply to crop.";
+    }
+
+    public void HideCropOverlay()
+    {
+        if (CropLayerCanvas != null)
+        {
+            CropLayerCanvas.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void UpdateCropOverlayVisuals()
+    {
+        if (CropLayerCanvas == null || CropBoxBorder == null) return;
+
+        double canvasW = DrawingCanvas.Width;
+        double canvasH = DrawingCanvas.Height;
+
+        // Clamp crop rect to canvas bounds
+        double x = Math.Max(0, Math.Min(_cropCurrentRect.X, canvasW - 20));
+        double y = Math.Max(0, Math.Min(_cropCurrentRect.Y, canvasH - 20));
+        double w = Math.Max(20, Math.Min(_cropCurrentRect.Width, canvasW - x));
+        double h = Math.Max(20, Math.Min(_cropCurrentRect.Height, canvasH - y));
+        _cropCurrentRect = new Rect(x, y, w, h);
+
+        // Crop box
+        Canvas.SetLeft(CropBoxBorder, x);
+        Canvas.SetTop(CropBoxBorder, y);
+        CropBoxBorder.Width = w;
+        CropBoxBorder.Height = h;
+
+        // 4 Shrouds
+        Canvas.SetLeft(CropShroudTop, 0);
+        Canvas.SetTop(CropShroudTop, 0);
+        CropShroudTop.Width = canvasW;
+        CropShroudTop.Height = y;
+
+        Canvas.SetLeft(CropShroudBottom, 0);
+        Canvas.SetTop(CropShroudBottom, y + h);
+        CropShroudBottom.Width = canvasW;
+        CropShroudBottom.Height = Math.Max(0, canvasH - (y + h));
+
+        Canvas.SetLeft(CropShroudLeft, 0);
+        Canvas.SetTop(CropShroudLeft, y);
+        CropShroudLeft.Width = x;
+        CropShroudLeft.Height = h;
+
+        Canvas.SetLeft(CropShroudRight, x + w);
+        Canvas.SetTop(CropShroudRight, y);
+        CropShroudRight.Width = Math.Max(0, canvasW - (x + w));
+        CropShroudRight.Height = h;
+
+        // 8 Handles
+        Canvas.SetLeft(CropHandleTL, x - 7);
+        Canvas.SetTop(CropHandleTL, y - 7);
+
+        Canvas.SetLeft(CropHandleTR, x + w - 7);
+        Canvas.SetTop(CropHandleTR, y - 7);
+
+        Canvas.SetLeft(CropHandleBL, x - 7);
+        Canvas.SetTop(CropHandleBL, y + h - 7);
+
+        Canvas.SetLeft(CropHandleBR, x + w - 7);
+        Canvas.SetTop(CropHandleBR, y + h - 7);
+
+        Canvas.SetLeft(CropHandleT, x + w / 2 - 12);
+        Canvas.SetTop(CropHandleT, y - 4);
+
+        Canvas.SetLeft(CropHandleB, x + w / 2 - 12);
+        Canvas.SetTop(CropHandleB, y + h - 4);
+
+        Canvas.SetLeft(CropHandleL, x - 4);
+        Canvas.SetTop(CropHandleL, y + h / 2 - 12);
+
+        Canvas.SetLeft(CropHandleR, x + w - 4);
+        Canvas.SetTop(CropHandleR, y + h / 2 - 12);
+
+        // Floating Action Bar
+        double barLeft = Math.Max(10, Math.Min(x + (w - 270) / 2, canvasW - 280));
+        double barTop = (y + h + 12 + 40 <= canvasH) ? y + h + 12 : Math.Max(10, y - 46);
+        Canvas.SetLeft(CropActionBar, barLeft);
+        Canvas.SetTop(CropActionBar, barTop);
+
+        if (TxtCropDims != null)
+        {
+            TxtCropDims.Text = $"{(int)w} × {(int)h} px";
+        }
+    }
+
+    private void OnCropLayerMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        var pt = e.GetPosition(CropLayerCanvas);
+        _cropDragStartPoint = pt;
+        _cropInitialRect = _cropCurrentRect;
+
+        var source = e.OriginalSource as FrameworkElement;
+        if (source == CropHandleTL) _cropDragMode = CropDragMode.TopLeft;
+        else if (source == CropHandleTR) _cropDragMode = CropDragMode.TopRight;
+        else if (source == CropHandleBL) _cropDragMode = CropDragMode.BottomLeft;
+        else if (source == CropHandleBR) _cropDragMode = CropDragMode.BottomRight;
+        else if (source == CropHandleT) _cropDragMode = CropDragMode.Top;
+        else if (source == CropHandleB) _cropDragMode = CropDragMode.Bottom;
+        else if (source == CropHandleL) _cropDragMode = CropDragMode.Left;
+        else if (source == CropHandleR) _cropDragMode = CropDragMode.Right;
+        else if (IsDescendantOf(source, CropBoxBorder)) _cropDragMode = CropDragMode.Move;
+        else
+        {
+            // Click outside initiates new crop box from this point
+            _cropCurrentRect = new Rect(pt.X, pt.Y, 20, 20);
+            _cropInitialRect = _cropCurrentRect;
+            _cropDragMode = CropDragMode.BottomRight;
+            UpdateCropOverlayVisuals();
+        }
+
+        CropLayerCanvas.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private static bool IsDescendantOf(FrameworkElement? element, FrameworkElement target)
+    {
+        while (element != null)
+        {
+            if (element == target) return true;
+            element = VisualTreeHelper.GetParent(element) as FrameworkElement;
+        }
+        return false;
+    }
+
+    private void OnCropLayerMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_cropDragMode == CropDragMode.None) return;
+
+        var pt = e.GetPosition(CropLayerCanvas);
+        double dx = pt.X - _cropDragStartPoint.X;
+        double dy = pt.Y - _cropDragStartPoint.Y;
+
+        double newX = _cropInitialRect.X;
+        double newY = _cropInitialRect.Y;
+        double newW = _cropInitialRect.Width;
+        double newH = _cropInitialRect.Height;
+
+        switch (_cropDragMode)
+        {
+            case CropDragMode.Move:
+                newX += dx;
+                newY += dy;
+                break;
+            case CropDragMode.TopLeft:
+                newX += dx;
+                newY += dy;
+                newW -= dx;
+                newH -= dy;
+                break;
+            case CropDragMode.TopRight:
+                newY += dy;
+                newW += dx;
+                newH -= dy;
+                break;
+            case CropDragMode.BottomLeft:
+                newX += dx;
+                newW -= dx;
+                newH += dy;
+                break;
+            case CropDragMode.BottomRight:
+                newW += dx;
+                newH += dy;
+                break;
+            case CropDragMode.Top:
+                newY += dy;
+                newH -= dy;
+                break;
+            case CropDragMode.Bottom:
+                newH += dy;
+                break;
+            case CropDragMode.Left:
+                newX += dx;
+                newW -= dx;
+                break;
+            case CropDragMode.Right:
+                newW += dx;
+                break;
+        }
+
+        if (newW < 20) { newW = 20; newX = _cropCurrentRect.X; }
+        if (newH < 20) { newH = 20; newY = _cropCurrentRect.Y; }
+
+        _cropCurrentRect = new Rect(newX, newY, newW, newH);
+        UpdateCropOverlayVisuals();
+        e.Handled = true;
+    }
+
+    private void OnCropLayerMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        _cropDragMode = CropDragMode.None;
+        CropLayerCanvas.ReleaseMouseCapture();
+        e.Handled = true;
+    }
+
+    internal void OnApplyCropClicked(object sender, RoutedEventArgs e)
+    {
+        ApplyCropSelectionInternal(_cropCurrentRect);
+        HideCropOverlay();
+        SetTool(AnnotationTool.Select);
+    }
+
+    private void OnCancelCropClicked(object sender, RoutedEventArgs e)
+    {
+        HideCropOverlay();
+        SetTool(AnnotationTool.Select);
+        if (TxtStatusMessage != null) TxtStatusMessage.Text = "Crop cancelled.";
+    }
+
+    private void ApplyCropSelectionInternal(Rect cropRect)
+    {
+        if (BaseImageElement.Source is not BitmapSource src) return;
+
+        int cx = Math.Max(0, (int)cropRect.X);
+        int cy = Math.Max(0, (int)cropRect.Y);
+        int cw = Math.Min(src.PixelWidth - cx, (int)cropRect.Width);
+        int ch = Math.Min(src.PixelHeight - cy, (int)cropRect.Height);
+
+        if (cw < 10 || ch < 10) return;
+
+        try
+        {
+            var prevBitmap = _originalBitmap ?? src;
+            var cropped = new CroppedBitmap(src, new Int32Rect(cx, cy, cw, ch));
+
+            // Push undo state!
+            _undoStack.Push(new BitmapSnapshotAction(prevBitmap, cropped, $"Crop ({cw} × {ch})"));
+            _redoStack.Clear();
+            UpdateUndoRedoState();
+
+            _originalBitmap = cropped;
+            _baseTunedBitmap = cropped;
+            ApplyBitmap(cropped, IOPath.GetFileName(_currentImagePath ?? "Cropped"), clearAnnotations: false);
+            SetDirty(true);
+            if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Cropped image to {cw} × {ch}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not crop image: {ex.Message}", "Crop Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private void ApplyCropSelection(FrameworkElement cropMarquee)
     {
         double x = Canvas.GetLeft(cropMarquee);
         double y = Canvas.GetTop(cropMarquee);
         double w = cropMarquee.Width;
         double h = cropMarquee.Height;
-
-        if (BaseImageElement.Source is not BitmapSource src) return;
-
-        int cx = Math.Max(0, (int)x);
-        int cy = Math.Max(0, (int)y);
-        int cw = Math.Min(src.PixelWidth - cx, (int)w);
-        int ch = Math.Min(src.PixelHeight - cy, (int)h);
-
-        if (cw < 10 || ch < 10) return;
-
-        try
-        {
-            var cropped = new CroppedBitmap(src, new Int32Rect(cx, cy, cw, ch));
-            _originalBitmap = cropped;
-            _baseTunedBitmap = cropped;
-            ApplyBitmap(cropped, IOPath.GetFileName(_currentImagePath ?? "Cropped"));
-            SetDirty(true);
-            if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Cropped canvas to {cw} × {ch}";
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Could not crop image: {ex.Message}", "Crop Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
+        ApplyCropSelectionInternal(new Rect(x, y, w, h));
     }
 
     #endregion
@@ -1289,8 +1561,12 @@ public partial class ImageAnnotationWindow : Window
 
         if (DrawingCanvas.Width <= 0 || DrawingCanvas.Height <= 0) return;
 
-        double targetW = DrawingCanvas.Width * 0.75;
-        double targetH = DrawingCanvas.Height * 0.75;
+        ShowCropOverlay();
+
+        double canvasW = DrawingCanvas.Width;
+        double canvasH = DrawingCanvas.Height;
+        double targetW = canvasW * 0.8;
+        double targetH = canvasH * 0.8;
 
         switch (tag)
         {
@@ -1301,71 +1577,91 @@ public partial class ImageAnnotationWindow : Window
                 break;
             case "16:9":
                 targetH = targetW * (9.0 / 16.0);
+                if (targetH > canvasH * 0.9)
+                {
+                    targetH = canvasH * 0.9;
+                    targetW = targetH * (16.0 / 9.0);
+                }
                 break;
             case "4:3":
                 targetH = targetW * (3.0 / 4.0);
+                if (targetH > canvasH * 0.9)
+                {
+                    targetH = canvasH * 0.9;
+                    targetW = targetH * (4.0 / 3.0);
+                }
                 break;
         }
 
-        var marquee = new Rectangle
-        {
-            Width = targetW,
-            Height = targetH,
-            Stroke = new SolidColorBrush(Color.FromRgb(0xFF, 0x7A, 0x1A)),
-            StrokeThickness = 2,
-            StrokeDashArray = new DoubleCollection { 4, 3 },
-            Fill = new SolidColorBrush(Color.FromArgb(0x22, 0xFF, 0x7A, 0x1A))
-        };
-
-        Canvas.SetLeft(marquee, (DrawingCanvas.Width - targetW) / 2);
-        Canvas.SetTop(marquee, (DrawingCanvas.Height - targetH) / 2);
-
-        DrawingCanvas.Children.Add(marquee);
-        ApplyCropSelection(marquee);
-        DrawingCanvas.Children.Remove(marquee);
+        _cropCurrentRect = new Rect((canvasW - targetW) / 2, (canvasH - targetH) / 2, targetW, targetH);
+        UpdateCropOverlayVisuals();
     }
 
     private void OnRotateCWClicked(object sender, RoutedEventArgs e)
     {
         if (_originalBitmap == null) return;
+        var prev = _originalBitmap;
         var transformed = new TransformedBitmap(_originalBitmap, new RotateTransform(90));
         transformed.Freeze();
+
+        _undoStack.Push(new BitmapSnapshotAction(prev, transformed, "Rotate 90° CW"));
+        _redoStack.Clear();
+        UpdateUndoRedoState();
+
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
-        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"));
+        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"), clearAnnotations: false);
         SetDirty(true);
     }
 
     private void OnRotateCCWClicked(object sender, RoutedEventArgs e)
     {
         if (_originalBitmap == null) return;
+        var prev = _originalBitmap;
         var transformed = new TransformedBitmap(_originalBitmap, new RotateTransform(270));
         transformed.Freeze();
+
+        _undoStack.Push(new BitmapSnapshotAction(prev, transformed, "Rotate 90° CCW"));
+        _redoStack.Clear();
+        UpdateUndoRedoState();
+
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
-        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"));
+        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Rotated"), clearAnnotations: false);
         SetDirty(true);
     }
 
     private void OnFlipHorizontalClicked(object sender, RoutedEventArgs e)
     {
         if (_originalBitmap == null) return;
+        var prev = _originalBitmap;
         var transformed = new TransformedBitmap(_originalBitmap, new ScaleTransform(-1, 1, _originalBitmap.PixelWidth / 2.0, 0));
         transformed.Freeze();
+
+        _undoStack.Push(new BitmapSnapshotAction(prev, transformed, "Flip Horizontal"));
+        _redoStack.Clear();
+        UpdateUndoRedoState();
+
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
-        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_H"));
+        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_H"), clearAnnotations: false);
         SetDirty(true);
     }
 
     private void OnFlipVerticalClicked(object sender, RoutedEventArgs e)
     {
         if (_originalBitmap == null) return;
+        var prev = _originalBitmap;
         var transformed = new TransformedBitmap(_originalBitmap, new ScaleTransform(1, -1, 0, _originalBitmap.PixelHeight / 2.0));
         transformed.Freeze();
+
+        _undoStack.Push(new BitmapSnapshotAction(prev, transformed, "Flip Vertical"));
+        _redoStack.Clear();
+        UpdateUndoRedoState();
+
         _originalBitmap = transformed;
         _baseTunedBitmap = transformed;
-        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_V"));
+        ApplyBitmap(transformed, IOPath.GetFileName(_currentImagePath ?? "Flipped_V"), clearAnnotations: false);
         SetDirty(true);
     }
 
@@ -1373,12 +1669,23 @@ public partial class ImageAnnotationWindow : Window
 
     #region Undo / Redo
 
-    private void OnUndoClicked(object sender, RoutedEventArgs e)
+    internal void OnUndoClicked(object sender, RoutedEventArgs e)
     {
         if (_undoStack.Count == 0) return;
 
         var item = _undoStack.Pop();
-        if (item is DeletedAnnotationAction del)
+        if (item is BitmapSnapshotAction bmpAction)
+        {
+            _originalBitmap = bmpAction.OldBitmap;
+            _baseTunedBitmap = bmpAction.OldBitmap;
+            ApplyBitmap(bmpAction.OldBitmap, IOPath.GetFileName(_currentImagePath ?? "Image"), clearAnnotations: false);
+            _redoStack.Push(bmpAction);
+            UpdateUndoRedoState();
+            SetDirty(true);
+            if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Undid {bmpAction.Description}";
+            return;
+        }
+        else if (item is DeletedAnnotationAction del)
         {
             del.Undo();
         }
@@ -1393,12 +1700,23 @@ public partial class ImageAnnotationWindow : Window
         if (TxtStatusMessage != null) TxtStatusMessage.Text = "Undid last annotation";
     }
 
-    private void OnRedoClicked(object sender, RoutedEventArgs e)
+    internal void OnRedoClicked(object sender, RoutedEventArgs e)
     {
         if (_redoStack.Count == 0) return;
 
         var item = _redoStack.Pop();
-        if (item is DeletedAnnotationAction del)
+        if (item is BitmapSnapshotAction bmpAction)
+        {
+            _originalBitmap = bmpAction.NewBitmap;
+            _baseTunedBitmap = bmpAction.NewBitmap;
+            ApplyBitmap(bmpAction.NewBitmap, IOPath.GetFileName(_currentImagePath ?? "Image"), clearAnnotations: false);
+            _undoStack.Push(bmpAction);
+            UpdateUndoRedoState();
+            SetDirty(true);
+            if (TxtStatusMessage != null) TxtStatusMessage.Text = $"Redid {bmpAction.Description}";
+            return;
+        }
+        else if (item is DeletedAnnotationAction del)
         {
             del.Redo();
         }
@@ -1667,6 +1985,22 @@ public partial class ImageAnnotationWindow : Window
 
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
     {
+        if (CropLayerCanvas != null && CropLayerCanvas.Visibility == Visibility.Visible)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OnApplyCropClicked(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Escape)
+            {
+                OnCancelCropClicked(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key == Key.Z && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
             OnUndoClicked(sender, e);
@@ -1712,6 +2046,20 @@ public partial class ImageAnnotationWindow : Window
     }
 
     #endregion
+
+    private sealed class BitmapSnapshotAction : UIElement
+    {
+        public BitmapSource OldBitmap { get; }
+        public BitmapSource NewBitmap { get; }
+        public string Description { get; }
+
+        public BitmapSnapshotAction(BitmapSource oldBitmap, BitmapSource newBitmap, string description)
+        {
+            OldBitmap = oldBitmap;
+            NewBitmap = newBitmap;
+            Description = description;
+        }
+    }
 
     private sealed class DeletedAnnotationAction : UIElement
     {
