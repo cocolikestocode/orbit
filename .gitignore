@@ -1,0 +1,56 @@
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio cache / temporary files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ide/
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## .NET Core / Roslyn
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Test Results
+TestResults/
+[Tt]est[Rr]esult*/
+
+## JetBrains Rider / ReSharper
+.idea/
+*.DotSettings.user
+
+## Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## OS Generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

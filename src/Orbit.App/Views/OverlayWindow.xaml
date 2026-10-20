@@ -1,0 +1,17 @@
+<Window x:Class="Orbit.App.Views.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Orbit.App.Controls"
+        Title="Orbit Overlay"
+        Width="560" Height="560"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual"
+        AllowDrop="True">
+    <Grid Width="560" Height="560">
+        <controls:RadialMenuControl x:Name="RadialMenu" HorizontalAlignment="Center" VerticalAlignment="Center" />
+    </Grid>
+</Window>

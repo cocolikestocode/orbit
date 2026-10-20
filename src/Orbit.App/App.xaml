@@ -1,0 +1,15 @@
+<Application x:Class="Orbit.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <!-- Modern Dark Theme Palette for Orbit -->
+        <SolidColorBrush x:Key="OrbitBackgroundBrush" Color="#0F1117" />
+        <SolidColorBrush x:Key="OrbitSurfaceBrush" Color="#1A1D27" />
+        <SolidColorBrush x:Key="OrbitSurfaceHoverBrush" Color="#252A38" />
+        <SolidColorBrush x:Key="OrbitPrimaryBrush" Color="#6366F1" />
+        <SolidColorBrush x:Key="OrbitAccentBrush" Color="#06B6D4" />
+        <SolidColorBrush x:Key="OrbitTextPrimaryBrush" Color="#F8FAFC" />
+        <SolidColorBrush x:Key="OrbitTextSecondaryBrush" Color="#94A3B8" />
+        <SolidColorBrush x:Key="OrbitBorderBrush" Color="#2E3547" />
+    </Application.Resources>
+</Application>
