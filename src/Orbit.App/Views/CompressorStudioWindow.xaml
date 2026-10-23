@@ -155,8 +155,8 @@
 
                         <!-- Downscale / Resize Section -->
                         <TextBlock Text="RESOLUTION DOWNSCALE" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <ComboBox x:Name="CbResolution" Height="36" Background="#20222C" Foreground="{DynamicResource OrbitTextPrimaryBrush}" 
-                                  BorderBrush="#353746" BorderThickness="1" SelectedIndex="0" SelectionChanged="OnResolutionChanged" Margin="0,0,0,18">
+                        <ComboBox x:Name="CbResolution" Height="36" Style="{StaticResource OrbitComboBoxStyle}"
+                                  SelectedIndex="0" SelectionChanged="OnResolutionChanged" Margin="0,0,0,18">
                             <ComboBoxItem Content="Keep 100% Original Resolution"/>
                             <ComboBoxItem Content="Downscale to 75%"/>
                             <ComboBoxItem Content="Downscale to 50% (Fast &amp; Small)"/>
@@ -166,8 +166,8 @@
 
                         <!-- Convert Format Section -->
                         <TextBlock Text="CONVERT FORMAT ON COMPRESS" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <ComboBox x:Name="CbFormat" Height="36" Background="#20222C" Foreground="{DynamicResource OrbitTextPrimaryBrush}" 
-                                  BorderBrush="#353746" BorderThickness="1" SelectedIndex="0" SelectionChanged="OnFormatChanged" Margin="0,0,0,18">
+                        <ComboBox x:Name="CbFormat" Height="36" Style="{StaticResource OrbitComboBoxStyle}"
+                                  SelectedIndex="0" SelectionChanged="OnFormatChanged" Margin="0,0,0,18">
                             <ComboBoxItem Content="Preserve Original Format"/>
                             <ComboBoxItem Content="Convert to WebP (Recommended, ~80% Smaller)"/>
                             <ComboBoxItem Content="Convert to JPEG"/>
