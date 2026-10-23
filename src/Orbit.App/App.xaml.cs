@@ -253,16 +253,16 @@ public partial class App : Application
 
         // 4. Password Protection & Decryption prompts
         string? password = null;
-        if (operation.Id == "doc-encrypt-pdf" || operation.Id == "sec-encrypt-file")
+        if (operation.Id == "doc-encrypt-pdf" || operation.Id == "sec-encrypt-file" || operation.Id == "archive-encrypt")
         {
-            var (confirmed, pwd) = PasswordInputDialog.Prompt("Protect Document", "Set an encryption password for this file:");
-            if (!confirmed) return;
+            var (confirmed, pwd) = PasswordInputDialog.Prompt("Protect & Encrypt", $"Set an encryption password for {operation.Label}:");
+            if (!confirmed || string.IsNullOrEmpty(pwd)) return;
             password = pwd;
         }
-        else if (operation.Id == "doc-decrypt-pdf" || operation.Id == "sec-decrypt-file")
+        else if (operation.Id == "doc-decrypt-pdf" || operation.Id == "sec-decrypt-file" || operation.Id == "archive-decrypt")
         {
-            var (confirmed, pwd) = PasswordInputDialog.Prompt("Unlock Document", "Enter password to decrypt this file:");
-            if (!confirmed) return;
+            var (confirmed, pwd) = PasswordInputDialog.Prompt("Unlock & Decrypt", $"Enter password to decrypt {files.FirstOrDefault()?.FileName ?? "file"}:");
+            if (!confirmed || string.IsNullOrEmpty(pwd)) return;
             password = pwd;
         }
 
@@ -299,8 +299,58 @@ public partial class App : Application
 
         try
         {
-            var jobId = await jobManager.EnqueueAsync(request);
-            System.Diagnostics.Trace.WriteLine($"[Orbit] Dispatched job {jobId} for {operation.Label} on {files.Length} files.");
+            string? dispatchedJobId = null;
+            EventHandler<JobInfo>? onComplete = null;
+            EventHandler<JobInfo>? onFailed = null;
+
+            onComplete = (s, completedJob) =>
+            {
+                if (dispatchedJobId != null && completedJob.JobId != dispatchedJobId) return;
+                jobManager.JobCompleted -= onComplete;
+                jobManager.JobFailed -= onFailed;
+
+                Dispatcher.Invoke(() =>
+                {
+                    var outFiles = completedJob.Result?.OutputFiles ?? Array.Empty<string>();
+                    var fileCount = outFiles.Length;
+                    var summary = fileCount > 0
+                        ? $"Output generated:\n{string.Join("\n", outFiles)}"
+                        : "Completed successfully.";
+
+                    var res = MessageBox.Show(
+                        $"{operation.Label} completed successfully!\n\n{summary}\n\nDo you want to open the containing folder?",
+                        "Orbit — Operation Complete",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (res == MessageBoxResult.Yes && fileCount > 0 && File.Exists(outFiles[0]))
+                    {
+                        System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{outFiles[0]}\"");
+                    }
+                });
+            };
+
+            onFailed = (s, failedJob) =>
+            {
+                if (dispatchedJobId != null && failedJob.JobId != dispatchedJobId) return;
+                jobManager.JobCompleted -= onComplete;
+                jobManager.JobFailed -= onFailed;
+
+                Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(
+                        $"Operation '{operation.Label}' failed:\n{failedJob.Result?.ErrorMessage ?? "Unknown error"}",
+                        "Orbit Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            };
+
+            jobManager.JobCompleted += onComplete;
+            jobManager.JobFailed += onFailed;
+
+            dispatchedJobId = await jobManager.EnqueueAsync(request);
+            System.Diagnostics.Trace.WriteLine($"[Orbit] Dispatched job {dispatchedJobId} for {operation.Label} on {files.Length} files.");
         }
         catch (Exception ex)
         {

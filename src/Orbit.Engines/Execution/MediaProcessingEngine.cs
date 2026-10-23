@@ -356,7 +356,7 @@ public class MediaProcessingEngine : IProcessingEngine
         }
     }
 
-    private static async Task RunFfmpegProcessAsync(string ffmpegPath, string arguments, CancellationToken cancellationToken)
+    public static async Task RunFfmpegProcessAsync(string ffmpegPath, string arguments, CancellationToken cancellationToken = default)
     {
         var psi = new ProcessStartInfo
         {

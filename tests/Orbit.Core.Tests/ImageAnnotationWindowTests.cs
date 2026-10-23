@@ -366,6 +366,66 @@ public class ImageAnnotationWindowTests : IDisposable
         threadException.Should().BeNull("ImageAnnotationWindow should support selecting, moving and resizing elements");
     }
 
+    [Fact]
+    public void PdfStudioWindow_ShouldInstantiateAndSupportZoomAndMarkupTools()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+
+                var window = new PdfStudioWindow();
+                window.Show();
+
+                // Create a sample PDF file using PdfSharpCore
+                var pdfPath = Path.Combine(_tempDir, "sample_studio.pdf");
+                using (var doc = new PdfSharpCore.Pdf.PdfDocument())
+                {
+                    var page1 = doc.AddPage();
+                    page1.Width = 600;
+                    page1.Height = 800;
+                    var page2 = doc.AddPage();
+                    page2.Width = 600;
+                    page2.Height = 800;
+                    doc.Save(pdfPath);
+                }
+
+                window.LoadPdf(pdfPath);
+                window.PageScaleTransform.ScaleX.Should().BeGreaterThan(0);
+                window.PageScaleTransform.ScaleY.Should().BeGreaterThan(0);
+
+                // Add markup element to canvas
+                var rect = new System.Windows.Shapes.Rectangle
+                {
+                    Width = 100,
+                    Height = 80,
+                    Stroke = System.Windows.Media.Brushes.Orange,
+                    StrokeThickness = 4.0
+                };
+                System.Windows.Controls.Canvas.SetLeft(rect, 40);
+                System.Windows.Controls.Canvas.SetTop(rect, 50);
+                window.PageDrawingCanvas.Children.Add(rect);
+
+                window.PageDrawingCanvas.Children.Contains(rect).Should().BeTrue();
+
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("PdfStudioWindow should instantiate and support zoom and markup canvas");
+    }
+
     public void Dispose()
     {
         try

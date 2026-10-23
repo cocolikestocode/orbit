@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Orbit — PDF Studio"
-        Height="840" Width="1280"
-        MinHeight="600" MinWidth="900"
+        Height="880" Width="1340"
+        MinHeight="640" MinWidth="960"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource OrbitBackgroundBrush}">
 
@@ -13,15 +13,17 @@
                 <ResourceDictionary Source="/Orbit.App;component/Themes/DarkTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!-- Standard Top Bar Action Button -->
             <Style x:Key="PdfActionBtn" TargetType="Button">
-                <Setter Property="Height" Value="34"/>
-                <Setter Property="Background" Value="#232530"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Background" Value="#20222C"/>
                 <Setter Property="Foreground" Value="{DynamicResource OrbitTextPrimaryBrush}"/>
                 <Setter Property="BorderBrush" Value="#353746"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding" Value="12,0"/>
+                <Setter Property="Padding" Value="10,0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -30,7 +32,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="Background" Value="#2F3242"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="#2C2F3E"/>
                                     <Setter TargetName="Bd" Property="BorderBrush" Value="#FF7A1A"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -39,8 +41,95 @@
                 </Setter>
             </Style>
 
+            <!-- Mini Button -->
+            <Style x:Key="PdfMiniBtn" TargetType="Button">
+                <Setter Property="Height" Value="24"/>
+                <Setter Property="Background" Value="#252733"/>
+                <Setter Property="Foreground" Value="{DynamicResource OrbitTextSecondaryBrush}"/>
+                <Setter Property="BorderBrush" Value="#353746"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="8,0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#FF7A1A"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Markup Tool Button Style -->
+            <Style x:Key="PdfToolBtn" TargetType="Button">
+                <Setter Property="Width" Value="34"/>
+                <Setter Property="Height" Value="32"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{DynamicResource OrbitTextPrimaryBrush}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Margin" Value="2,0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#282A38"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#3D4255"/>
+                                </Trigger>
+                                <Trigger Property="Tag" Value="Active">
+                                    <Setter TargetName="Bd" Property="Background" Value="#FF7A1A"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#FFA552"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Color Swatch Style -->
+            <Style x:Key="PdfColorSwatch" TargetType="Button">
+                <Setter Property="Width" Value="22"/>
+                <Setter Property="Height" Value="22"/>
+                <Setter Property="Margin" Value="2,0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="11" BorderBrush="#3D4252" BorderThickness="1.5">
+                                <Ellipse x:Name="InnerDot" Width="6" Height="6" Fill="White" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="White" />
+                                </Trigger>
+                                <Trigger Property="Tag" Value="Selected">
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#FF7A1A" />
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="2.5" />
+                                    <Setter TargetName="InnerDot" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Thumbnail ListBoxItem Style -->
             <Style x:Key="ThumbnailItemStyle" TargetType="ListBoxItem">
-                <Setter Property="Margin" Value="0,0,0,12"/>
+                <Setter Property="Margin" Value="0,0,0,10"/>
                 <Setter Property="Padding" Value="4"/>
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Template">
@@ -52,7 +141,7 @@
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
                                     <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FF7A1A"/>
-                                    <Setter TargetName="ItemBorder" Property="Background" Value="#1C2638"/>
+                                    <Setter TargetName="ItemBorder" Property="Background" Value="#1E2738"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="ItemBorder" Property="Background" Value="#232532"/>
@@ -67,26 +156,31 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <!-- Top Toolbar -->
+            <!-- Row 0: Top Header & Document Management Bar -->
             <RowDefinition Height="Auto"/>
-            <!-- Main Content (Thumbnails + Viewer) -->
+            <!-- Row 1: Markup, Annotation, Color & Stroke Bar -->
+            <RowDefinition Height="Auto"/>
+            <!-- Row 2: Main Workspace (Thumbnails + Canvas Viewer) -->
             <RowDefinition Height="*"/>
-            <!-- Status Bar -->
+            <!-- Row 3: Status Footer -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- TOP TOOLBAR -->
-        <Border Grid.Row="0" Background="#16171E" BorderBrush="#2D303E" BorderThickness="0,0,0,1" Padding="16,10">
+        <!-- ROW 0: TOP HEADER & DOCUMENT ACTIONS -->
+        <Border Grid.Row="0" Background="#16171E" BorderBrush="#2D303E" BorderThickness="0,0,0,1" Padding="16,8">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- Left: Title & File Badge -->
                     <ColumnDefinition Width="Auto"/>
+                    <!-- Center: Document Operations (Rotate, Delete, Move, Merge, Protect, Export) -->
                     <ColumnDefinition Width="*"/>
+                    <!-- Right: Save & Export Buttons -->
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left: Title & File Badge -->
+                <!-- Left Section: Title & Dirty State Badge -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#2B1A14" BorderBrush="#FF7A1A" BorderThickness="1" CornerRadius="8" Width="36" Height="36" Margin="0,0,12,0">
+                    <Border Background="#2B1A14" BorderBrush="#FF7A1A" BorderThickness="1" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
                         <TextBlock Text="📄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
@@ -96,29 +190,36 @@
                                 <TextBlock Text="● Unsaved Changes" Foreground="#FF7A1A" FontSize="10" FontWeight="SemiBold"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock x:Name="TxtDocMeta" Text="No document loaded" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="TxtDocMeta" Text="No document loaded" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Center: Page Actions (Rotate, Delete, Move) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Button Style="{StaticResource PdfActionBtn}" Content="↶ Rotate Left" Click="OnRotateLeftClicked" Margin="0,0,6,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="↷ Rotate Right" Click="OnRotateRightClicked" Margin="0,0,6,0"/>
-                    <Rectangle Width="1" Height="22" Fill="#353746" Margin="8,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="▲ Move Up" Click="OnMoveUpClicked" Margin="0,0,6,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="▼ Move Down" Click="OnMoveDownClicked" Margin="0,0,6,0"/>
-                    <Rectangle Width="1" Height="22" Fill="#353746" Margin="8,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="🗑 Delete Page" Click="OnDeletePageClicked" Margin="0,0,6,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="✂ Extract Page" Click="OnExtractPageClicked" Margin="0,0,6,0"/>
-                    <Rectangle Width="1" Height="22" Fill="#353746" Margin="8,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="🔒 Protect..." Click="OnProtectClicked" Margin="0,0,6,0"/>
-                    <Button Style="{StaticResource PdfActionBtn}" Content="🖼 Export Images" Click="OnExportImagesClicked"/>
-                </StackPanel>
+                <!-- Center Section: Page Operations WrapPanel (Responsive & Non-overlapping) -->
+                <WrapPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14,0">
+                    <Button Style="{StaticResource PdfActionBtn}" Content="↶ Rotate Left" Click="OnRotateLeftClicked" ToolTip="Rotate selected page(s) counter-clockwise (90°)" Margin="0,2,6,2"/>
+                    <Button Style="{StaticResource PdfActionBtn}" Content="↷ Rotate Right" Click="OnRotateRightClicked" ToolTip="Rotate selected page(s) clockwise (90°)" Margin="0,2,6,2"/>
+                    
+                    <Rectangle Width="1" Height="20" Fill="#353746" Margin="4,6,8,6"/>
+                    
+                    <Button Style="{StaticResource PdfActionBtn}" Content="▲ Move Up" Click="OnMoveUpClicked" ToolTip="Move page earlier in document" Margin="0,2,6,2"/>
+                    <Button Style="{StaticResource PdfActionBtn}" Content="▼ Move Down" Click="OnMoveDownClicked" ToolTip="Move page later in document" Margin="0,2,6,2"/>
+                    
+                    <Rectangle Width="1" Height="20" Fill="#353746" Margin="4,6,8,6"/>
+                    
+                    <Button Style="{StaticResource PdfActionBtn}" Content="🗑 Delete" Click="OnDeletePageClicked" ToolTip="Delete selected page(s)" Margin="0,2,6,2"/>
+                    <Button Style="{StaticResource PdfActionBtn}" Content="✂ Extract" Click="OnExtractPageClicked" ToolTip="Extract selected page(s) into new PDF" Margin="0,2,6,2"/>
+                    <Button Style="{StaticResource PdfActionBtn}" Content="➕ Insert / Merge..." Click="OnInsertMergeClicked" ToolTip="Merge external PDF or images directly into this document" Margin="0,2,6,2"/>
+                    
+                    <Rectangle Width="1" Height="20" Fill="#353746" Margin="4,6,8,6"/>
+                    
+                    <Button Style="{StaticResource PdfActionBtn}" Content="🔒 Protect..." Click="OnProtectClicked" ToolTip="Set password protection &amp; encryption" Margin="0,2,6,2"/>
+                    <Button Style="{StaticResource PdfActionBtn}" Content="🖼 Export Images" Click="OnExportImagesClicked" ToolTip="Export pages as high-resolution images" Margin="0,2,0,2"/>
+                </WrapPanel>
 
-                <!-- Right: Save & Export Buttons -->
+                <!-- Right Section: Save & Export Buttons -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource PdfActionBtn}" Content="Save As..." Click="OnSaveAsClicked" Margin="0,0,8,0"/>
-                    <Button x:Name="BtnSave" Content="Save PDF" Width="100" Height="34" Background="#FF7A1A" Foreground="White" FontWeight="SemiBold" BorderThickness="0" Cursor="Hand" Click="OnSaveClicked">
+                    <Button x:Name="BtnSave" Content="Save PDF" Width="95" Height="32" Background="#FF7A1A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="OnSaveClicked">
                         <Button.Resources>
                             <Style TargetType="Border"><Setter Property="CornerRadius" Value="6"/></Style>
                         </Button.Resources>
@@ -127,13 +228,180 @@
             </Grid>
         </Border>
 
-        <!-- MAIN CONTENT AREA -->
-        <Grid Grid.Row="1">
+        <!-- ROW 1: MARKUP & ANNOTATION SUB-TOOLBAR -->
+        <Border Grid.Row="1" Background="#1A1C25" BorderBrush="#2A2D3C" BorderThickness="0,0,0,1" Padding="16,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Left: Markup Tools Switcher -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Center: Colors, Stroke Thickness & Custom Color Picker -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Right: Zoom Controls -->
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Markup Tools -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Select / Move (V) -->
+                    <Button x:Name="BtnToolSelect" Tag="Active" Style="{StaticResource PdfToolBtn}" ToolTip="Select, Move &amp; Resize Markup (V)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="↖" FontSize="15" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Freehand Pen (P) -->
+                    <Button x:Name="BtnToolPen" Style="{StaticResource PdfToolBtn}" ToolTip="Freehand Pen / Ink Drawing (P)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="✏" FontSize="14" Foreground="#FF7A1A" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Highlighter (H) -->
+                    <Button x:Name="BtnToolHighlight" Style="{StaticResource PdfToolBtn}" ToolTip="Translucent Text Highlighter (H)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="▮" FontSize="15" Foreground="#FACC15"/>
+                    </Button>
+
+                    <!-- Rectangle Shape (R) -->
+                    <Button x:Name="BtnToolRectangle" Style="{StaticResource PdfToolBtn}" ToolTip="Draw Rectangle Outline / Box (R)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="▭" FontSize="15" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Circle Shape (O) -->
+                    <Button x:Name="BtnToolCircle" Style="{StaticResource PdfToolBtn}" ToolTip="Draw Circle / Ellipse (O)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="○" FontSize="15" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Arrow / Line (A) -->
+                    <Button x:Name="BtnToolArrow" Style="{StaticResource PdfToolBtn}" ToolTip="Draw Pointer Arrow (A)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="➔" FontSize="15" Foreground="#EF4444" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Text Callout (T) -->
+                    <Button x:Name="BtnToolText" Style="{StaticResource PdfToolBtn}" ToolTip="Insert Text Note / Callout (T)" Click="OnMarkupToolClicked">
+                        <TextBlock Text="T" FontSize="14" FontWeight="Bold"/>
+                    </Button>
+
+                    <!-- Insert Image / Stamp / Signature (I) -->
+                    <Button x:Name="BtnToolImage" Style="{StaticResource PdfToolBtn}" ToolTip="Insert Image, Stamp or Signature (I)" Click="OnInsertImageClicked">
+                        <TextBlock Text="🖼" FontSize="14"/>
+                    </Button>
+
+                    <Rectangle Width="1" Height="20" Fill="#353746" Margin="6,0"/>
+
+                    <!-- Delete Selected -->
+                    <Button Style="{StaticResource PdfToolBtn}" ToolTip="Delete Selected Markup (Del)" Click="OnDeleteMarkupClicked">
+                        <TextBlock Text="🗑" FontSize="13" Foreground="#EF4444"/>
+                    </Button>
+
+                    <!-- Clear Page Annotations -->
+                    <Button Style="{StaticResource PdfToolBtn}" ToolTip="Clear All Markups On Current Page" Click="OnClearPageMarkupClicked">
+                        <TextBlock Text="✕" FontSize="12" Foreground="{DynamicResource OrbitTextSecondaryBrush}"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Center: Colors & Stroke Slider -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="Color:" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+
+                    <!-- Palette Swatches -->
+                    <Button x:Name="SwatchOrange" Background="#FF7A1A" Tag="Selected" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Orange"/>
+                    <Button x:Name="SwatchRed" Background="#EF4444" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Red"/>
+                    <Button x:Name="SwatchYellow" Background="#FACC15" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Yellow Highlighter"/>
+                    <Button x:Name="SwatchGreen" Background="#10B981" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Green"/>
+                    <Button x:Name="SwatchBlue" Background="#3B82F6" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Blue"/>
+                    <Button x:Name="SwatchPurple" Background="#8B5CF6" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Purple"/>
+                    <Button x:Name="SwatchBlack" Background="#000000" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="Black"/>
+                    <Button x:Name="SwatchWhite" Background="#FFFFFF" Style="{StaticResource PdfColorSwatch}" Click="OnColorSwatchClicked" ToolTip="White"/>
+
+                    <!-- Custom Color Picker Button -->
+                    <Button x:Name="BtnCustomColor" Width="22" Height="22" Margin="3,0,10,0" Cursor="Hand" ToolTip="Custom Color (HEX / RGB)..." Click="OnCustomColorButtonClicked">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Border" CornerRadius="11" BorderBrush="#FF7A1A" BorderThickness="1.5">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#EF4444" Offset="0"/>
+                                            <GradientStop Color="#F59E0B" Offset="0.33"/>
+                                            <GradientStop Color="#10B981" Offset="0.66"/>
+                                            <GradientStop Color="#3B82F6" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <TextBlock Text="+" FontSize="12" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Color Picker Popup -->
+                    <Popup x:Name="PopupColorPicker" PlacementTarget="{Binding ElementName=BtnCustomColor}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                        <Border Background="#1E202B" BorderBrush="#353746" BorderThickness="1" CornerRadius="10" Padding="14" Width="260">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Text="PDF Custom Color Picker" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="Bold" Margin="0,0,0,10"/>
+                                
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="38"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border x:Name="PickerPreviewBox" Grid.Column="0" Height="30" CornerRadius="6" BorderBrush="#4A4E62" BorderThickness="1" Background="#FF7A1A"/>
+                                    <TextBox x:Name="TxtHexColor" Grid.Column="1" Height="30" Margin="8,0,0,0" Background="#262836" Foreground="White" BorderBrush="#4A4E62" BorderThickness="1" Padding="6,4" FontSize="12" FontWeight="SemiBold" Text="#FF7A1A" TextChanged="OnPickerHexChanged"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="R" Foreground="#EF4444" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderRed" Minimum="0" Maximum="255" Value="255" Margin="20,0,32,0" ValueChanged="OnPickerRgbSliderChanged"/>
+                                    <TextBlock x:Name="TxtRedVal" Text="255" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <TextBlock Text="G" Foreground="#10B981" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderGreen" Minimum="0" Maximum="255" Value="122" Margin="20,0,32,0" ValueChanged="OnPickerRgbSliderChanged"/>
+                                    <TextBlock x:Name="TxtGreenVal" Text="122" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,12">
+                                    <TextBlock Text="B" Foreground="#3B82F6" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderBlue" Minimum="0" Maximum="255" Value="26" Margin="20,0,32,0" ValueChanged="OnPickerRgbSliderChanged"/>
+                                    <TextBlock x:Name="TxtBlueVal" Text="26" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Button Content="Apply Color" Height="30" Background="#FF7A1A" Foreground="White" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Click="OnPickerApplyClicked">
+                                    <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="6"/></Style></Button.Resources>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
+                    <Rectangle Width="1" Height="20" Fill="#353746" Margin="4,0,12,0"/>
+
+                    <!-- Stroke Thickness -->
+                    <TextBlock Text="Thickness:" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <Slider x:Name="SliderStrokeThickness" Minimum="1" Maximum="32" Value="4" Width="90" VerticalAlignment="Center" ValueChanged="OnThicknessChanged"/>
+                    <TextBlock x:Name="TxtThickness" Text="4px" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                </StackPanel>
+
+                <!-- Right: Zoom Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="-" Width="26" Height="26" Background="#252733" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnZoomOutClicked">
+                        <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
+                    </Button>
+                    <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0"/>
+                    <Button Content="+" Width="26" Height="26" Background="#252733" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnZoomInClicked">
+                        <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
+                    </Button>
+                    <Button Content="Fit Page" Height="26" Padding="8,0" Background="#252733" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnFitPageClicked" Margin="6,0,0,0">
+                        <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ROW 2: MAIN CONTENT AREA (THUMBNAILS + VIEWER) -->
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <!-- Left Sidebar: Pages Thumbnails Strip -->
-                <ColumnDefinition Width="260" MinWidth="180" MaxWidth="360"/>
+                <ColumnDefinition Width="270" MinWidth="190" MaxWidth="380"/>
                 <ColumnDefinition Width="Auto"/>
-                <!-- Center: High-Resolution Page Canvas Viewer -->
+                <!-- Center: Canvas Page Viewer with Zoom Transform -->
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -145,11 +413,25 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Padding="16,12" BorderBrush="#262834" BorderThickness="0,0,0,1">
-                        <TextBlock x:Name="TxtPagesHeader" Text="Pages (0)" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13" FontWeight="SemiBold"/>
+                    <!-- Thumbnails Header Strip -->
+                    <Border Grid.Row="0" Padding="14,10" BorderBrush="#262834" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <TextBlock x:Name="TxtPagesHeader" Text="Pages (0)" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Select All" Style="{StaticResource PdfMiniBtn}" Click="OnSelectAllClicked" Margin="0,0,4,0"/>
+                                <Button Content="Clear" Style="{StaticResource PdfMiniBtn}" Click="OnDeselectAllClicked"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
+                    <!-- Thumbnails with Multi-Select and Drag-Drop Reorder -->
                     <ListBox Grid.Row="1" x:Name="LbThumbnails" Background="Transparent" BorderThickness="0" Padding="12"
+                             SelectionMode="Extended"
+                             AllowDrop="True"
+                             PreviewMouseLeftButtonDown="OnThumbnailsPreviewMouseLeftButtonDown"
+                             PreviewMouseMove="OnThumbnailsPreviewMouseMove"
+                             DragOver="OnThumbnailsDragOver"
+                             Drop="OnThumbnailsDrop"
                              ItemContainerStyle="{StaticResource ThumbnailItemStyle}"
                              SelectionChanged="OnThumbnailSelectionChanged"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -172,38 +454,59 @@
 
             <!-- Center Viewer Canvas -->
             <Grid Grid.Column="2" Background="#101116">
-                <ScrollViewer x:Name="PdfScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="Transparent">
+                <ScrollViewer x:Name="PdfScrollViewer" 
+                              HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Auto" 
+                              Background="Transparent"
+                              PreviewMouseWheel="OnScrollViewerPreviewMouseWheel">
                     <Grid x:Name="ViewerContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="32">
+                        <Grid.LayoutTransform>
+                            <ScaleTransform x:Name="PageScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+                        </Grid.LayoutTransform>
+
                         <Border BorderBrush="#2D313E" BorderThickness="1" CornerRadius="4" Background="White">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.5" Color="#000000"/>
                             </Border.Effect>
-                            <Image x:Name="ActivePageImage" Stretch="None" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                            <!-- Interactive Page Canvas: Base Page + Markups + Inserted Images -->
+                            <Canvas x:Name="PageDrawingCanvas"
+                                    Width="800" Height="1100"
+                                    Background="White"
+                                    ClipToBounds="False"
+                                    MouseLeftButtonDown="OnCanvasMouseLeftButtonDown"
+                                    MouseMove="OnCanvasMouseMove"
+                                    MouseLeftButtonUp="OnCanvasMouseLeftButtonUp">
+                                
+                                <!-- Base Image rendered at exact page pixel dimensions -->
+                                <Image x:Name="ActivePageImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+
+                                <!-- Selection Bounding Adorner with 8 resize handles -->
+                                <Rectangle x:Name="SelectionBoundsRect" 
+                                           Stroke="#FF7A1A" 
+                                           StrokeThickness="1.5" 
+                                           StrokeDashArray="4,3" 
+                                           Visibility="Collapsed" 
+                                           IsHitTestVisible="False"/>
+
+                                <!-- 8 Interactive Resize Handles -->
+                                <Thumb x:Name="HandleTL" Width="10" Height="10" Cursor="SizeNWSE" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleTC" Width="10" Height="10" Cursor="SizeNS" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleTR" Width="10" Height="10" Cursor="SizeNESW" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleML" Width="10" Height="10" Cursor="SizeWE" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleMR" Width="10" Height="10" Cursor="SizeWE" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleBL" Width="10" Height="10" Cursor="SizeNESW" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleBC" Width="10" Height="10" Cursor="SizeNS" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                                <Thumb x:Name="HandleBR" Width="10" Height="10" Cursor="SizeNWSE" Visibility="Collapsed" DragDelta="OnHandleDragDelta"/>
+                            </Canvas>
                         </Border>
                     </Grid>
                 </ScrollViewer>
-
-                <!-- Floating Zoom Bar -->
-                <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="24" Background="#1E202B" BorderBrush="#353746" BorderThickness="1" CornerRadius="8" Padding="12,6">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="-" Width="28" Height="28" Background="#282A36" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnZoomOutClicked">
-                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
-                        </Button>
-                        <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0"/>
-                        <Button Content="+" Width="28" Height="28" Background="#282A36" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnZoomInClicked">
-                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
-                        </Button>
-                        <Rectangle Width="1" Height="18" Fill="#353746" Margin="10,0"/>
-                        <Button Content="Fit Page" Height="28" Padding="8,0" Background="#282A36" Foreground="{DynamicResource OrbitTextPrimaryBrush}" BorderThickness="0" Cursor="Hand" Click="OnFitPageClicked">
-                            <Button.Resources><Style TargetType="Border"><Setter Property="CornerRadius" Value="4"/></Style></Button.Resources>
-                        </Button>
-                    </StackPanel>
-                </Border>
             </Grid>
         </Grid>
 
-        <!-- STATUS BAR -->
-        <Border Grid.Row="2" Background="#16171E" BorderBrush="#2D303E" BorderThickness="0,1,0,0" Padding="16,8">
+        <!-- ROW 3: STATUS FOOTER -->
+        <Border Grid.Row="3" Background="#16171E" BorderBrush="#2D303E" BorderThickness="0,1,0,0" Padding="16,8">
             <Grid>
                 <TextBlock x:Name="TxtStatus" Text="Ready" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12"/>
                 <TextBlock x:Name="TxtCurrentPageInfo" Text="" HorizontalAlignment="Right" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12"/>

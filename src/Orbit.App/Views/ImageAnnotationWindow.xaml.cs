@@ -461,6 +461,83 @@ public partial class ImageAnnotationWindow : Window
         }
     }
 
+    private bool _isUpdatingColorPickerInternal;
+
+    private void OnCustomColorButtonClicked(object sender, RoutedEventArgs e)
+    {
+        _isUpdatingColorPickerInternal = true;
+        SliderRed.Value = _currentColor.R;
+        SliderGreen.Value = _currentColor.G;
+        SliderBlue.Value = _currentColor.B;
+        TxtRedVal.Text = _currentColor.R.ToString();
+        TxtGreenVal.Text = _currentColor.G.ToString();
+        TxtBlueVal.Text = _currentColor.B.ToString();
+        TxtHexColor.Text = $"#{_currentColor.R:X2}{_currentColor.G:X2}{_currentColor.B:X2}";
+        PickerPreviewBox.Background = new SolidColorBrush(_currentColor);
+        _isUpdatingColorPickerInternal = false;
+
+        PopupColorPicker.IsOpen = true;
+    }
+
+    private void OnPickerRgbSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_isUpdatingColorPickerInternal) return;
+
+        byte r = (byte)(SliderRed?.Value ?? 0);
+        byte g = (byte)(SliderGreen?.Value ?? 0);
+        byte b = (byte)(SliderBlue?.Value ?? 0);
+
+        if (TxtRedVal != null) TxtRedVal.Text = r.ToString();
+        if (TxtGreenVal != null) TxtGreenVal.Text = g.ToString();
+        if (TxtBlueVal != null) TxtBlueVal.Text = b.ToString();
+
+        _isUpdatingColorPickerInternal = true;
+        var color = System.Windows.Media.Color.FromRgb(r, g, b);
+        if (TxtHexColor != null) TxtHexColor.Text = $"#{r:X2}{g:X2}{b:X2}";
+        if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(color);
+        _isUpdatingColorPickerInternal = false;
+    }
+
+    private void OnPickerHexChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isUpdatingColorPickerInternal || TxtHexColor == null) return;
+
+        var text = TxtHexColor.Text.Trim();
+        if (!text.StartsWith("#")) text = "#" + text;
+
+        try
+        {
+            var parsed = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(text);
+            _isUpdatingColorPickerInternal = true;
+            if (SliderRed != null) SliderRed.Value = parsed.R;
+            if (SliderGreen != null) SliderGreen.Value = parsed.G;
+            if (SliderBlue != null) SliderBlue.Value = parsed.B;
+            if (TxtRedVal != null) TxtRedVal.Text = parsed.R.ToString();
+            if (TxtGreenVal != null) TxtGreenVal.Text = parsed.G.ToString();
+            if (TxtBlueVal != null) TxtBlueVal.Text = parsed.B.ToString();
+            if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(parsed);
+            _isUpdatingColorPickerInternal = false;
+        }
+        catch { }
+    }
+
+    private void OnPickerApplyClicked(object sender, RoutedEventArgs e)
+    {
+        byte r = (byte)(SliderRed?.Value ?? 255);
+        byte g = (byte)(SliderGreen?.Value ?? 122);
+        byte b = (byte)(SliderBlue?.Value ?? 26);
+        _currentColor = System.Windows.Media.Color.FromRgb(r, g, b);
+
+        var swatches = new[] { SwatchRed, SwatchCoral, SwatchOrange, SwatchAmber, SwatchLime, SwatchGreen, SwatchCyan, SwatchBlue, SwatchPurple, SwatchPink, SwatchWhite, SwatchBlack };
+        foreach (var s in swatches)
+        {
+            if (s != null) s.Tag = null;
+        }
+
+        UpdateStrokePreview();
+        PopupColorPicker.IsOpen = false;
+    }
+
     private void OnResetBadgeCounterClicked(object sender, RoutedEventArgs e)
     {
         _stepBadgeCounter = 1;

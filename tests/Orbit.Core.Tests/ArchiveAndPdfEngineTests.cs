@@ -523,6 +523,35 @@ ET";
         extractedText.Should().Contain("Success"); // Hex <53756363657373> = "Success"
     }
 
+    [Fact]
+    public async Task ArchiveEngine_ShouldCreateEncryptedArchive_WithPassword()
+    {
+        var file1 = Path.Combine(_tempDir, "secret_doc.txt");
+        await File.WriteAllTextAsync(file1, "Top secret information protected with AES-256.");
+        var id1 = _identifier.Identify(file1);
+
+        var request = new OperationRequest
+        {
+            OperationId = "archive-encrypt",
+            InputFiles = new[] { id1 },
+            OutputDirectory = _tempDir,
+            Parameters = { ["password"] = "P@ssw0rdSecure" }
+        };
+
+        var result = await _archiveEngine.ExecuteAsync(request, new Progress<OperationProgress>());
+
+        result.Success.Should().BeTrue();
+        result.OutputFiles.Should().NotBeNullOrEmpty();
+        var encFile = result.OutputFiles[0];
+        File.Exists(encFile).Should().BeTrue();
+        encFile.Should().EndWith(".orbit.enc");
+
+        // Verify magic header
+        var bytes = await File.ReadAllBytesAsync(encFile);
+        var header = Encoding.ASCII.GetString(bytes, 0, 8);
+        header.Should().Be("ORBITENC");
+    }
+
     public void Dispose()
     {
         try

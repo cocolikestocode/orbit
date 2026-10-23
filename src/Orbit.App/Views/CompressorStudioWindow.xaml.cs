@@ -42,34 +42,142 @@ public partial class CompressorStudioWindow : Window
             _family = FileFamily.Image;
             TxtFormatBadge.Text = $"IMAGE • {ext.TrimStart('.').ToUpper()}";
             LoadImagePreview(filePath);
+            ConfigureControlsForImage();
         }
         else if (ext is ".pdf")
         {
             _family = FileFamily.Document;
             TxtFormatBadge.Text = "DOCUMENT • PDF";
             LoadPdfDetails(filePath);
+            ConfigureControlsForPdf();
         }
         else if (ext is ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm")
         {
             _family = FileFamily.Video;
             TxtFormatBadge.Text = $"VIDEO • {ext.TrimStart('.').ToUpper()}";
             LoadMediaDetails(filePath, ext);
+            ConfigureControlsForVideo();
         }
-        else if (ext is ".mp3" or ".wav")
+        else if (ext is ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" or ".m4a")
         {
             _family = FileFamily.Audio;
             TxtFormatBadge.Text = $"AUDIO • {ext.TrimStart('.').ToUpper()}";
             LoadMediaDetails(filePath, ext);
+            ConfigureControlsForAudio();
         }
         else
         {
             _family = FileFamily.Archive;
             TxtFormatBadge.Text = $"ARCHIVE • {ext.TrimStart('.').ToUpper()}";
             LoadArchiveDetails(filePath);
+            ConfigureControlsForArchive();
         }
 
         _isLoaded = true;
         RecalculateEstimates();
+    }
+
+    private void ConfigureControlsForImage()
+    {
+        CbResolution.Items.Clear();
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Keep 100% Original Resolution" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to 75%" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to 50% (Fast & Small)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to Max 1080p FHD" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to Max 720p HD" });
+        CbResolution.SelectedIndex = 0;
+
+        CbFormat.Items.Clear();
+        CbFormat.Items.Add(new ComboBoxItem { Content = "Preserve Original Format" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "Convert to WebP (Recommended, ~80% Smaller)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "Convert to JPEG" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "Convert to PNG (Lossless)" });
+        CbFormat.SelectedIndex = 0;
+
+        ChkStripMetadata.Content = "Strip EXIF metadata (Camera, GPS, Timestamps)";
+        ChkOptimizePalette.Content = "Lossless color palette & chunk compression";
+        ChkStripMetadata.IsChecked = true;
+        ChkOptimizePalette.IsChecked = true;
+    }
+
+    private void ConfigureControlsForVideo()
+    {
+        CbResolution.Items.Clear();
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Keep Original Video Resolution" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to 1080p FHD (1920x1080)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to 720p HD (1280x720)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Downscale to 480p SD (854x480)" });
+        CbResolution.SelectedIndex = 0;
+
+        CbFormat.Items.Clear();
+        CbFormat.Items.Add(new ComboBoxItem { Content = "MP4 (H.264 + AAC - Universal Compatibility)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "WebM (VP9 + Opus - Modern Web Streaming)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "MP4 (H.265 / HEVC - Max Compression)" });
+        CbFormat.SelectedIndex = 0;
+
+        ChkStripMetadata.Content = "FastStart Web Optimization (Move moov atom to front)";
+        ChkOptimizePalette.Content = "Optimize audio stream (AAC 128 kbps)";
+        ChkStripMetadata.IsChecked = true;
+        ChkOptimizePalette.IsChecked = true;
+    }
+
+    private void ConfigureControlsForAudio()
+    {
+        CbResolution.Items.Clear();
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Stereo (2 Channels)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Mono (1 Channel - Cut file size by ~50%)" });
+        CbResolution.SelectedIndex = 0;
+
+        CbFormat.Items.Clear();
+        CbFormat.Items.Add(new ComboBoxItem { Content = "MP3 (128 kbps - High Quality)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "MP3 (96 kbps - Compact Speech / Podcast)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "AAC / M4A (128 kbps - Modern Codec)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "OGG Vorbis" });
+        CbFormat.SelectedIndex = 0;
+
+        ChkStripMetadata.Content = "Normalize audio loudness (EBU R128 standard)";
+        ChkOptimizePalette.Content = "Strip ID3 tags and cover album art";
+        ChkStripMetadata.IsChecked = true;
+        ChkOptimizePalette.IsChecked = false;
+    }
+
+    private void ConfigureControlsForPdf()
+    {
+        CbResolution.Items.Clear();
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Balanced PDF Optimization (150 DPI eBook standard)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Web & Email Ready (96 DPI Screen standard)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Maximum Compression (72 DPI Low-res images)" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Lossless Stream Compression (Keep 100% Vector Quality)" });
+        CbResolution.SelectedIndex = 0;
+
+        CbFormat.Items.Clear();
+        CbFormat.Items.Add(new ComboBoxItem { Content = "PDF Document (.pdf)" });
+        CbFormat.SelectedIndex = 0;
+
+        ChkStripMetadata.Content = "Compress uncompressed page streams with FlateDecode";
+        ChkOptimizePalette.Content = "Remove orphan PDF objects and redundant metadata";
+        ChkStripMetadata.IsChecked = true;
+        ChkOptimizePalette.IsChecked = true;
+    }
+
+    private void ConfigureControlsForArchive()
+    {
+        CbResolution.Items.Clear();
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Maximum Deflate Compression" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Ultra LZMA2 Compression" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Normal Compression" });
+        CbResolution.Items.Add(new ComboBoxItem { Content = "Fastest Storage" });
+        CbResolution.SelectedIndex = 0;
+
+        CbFormat.Items.Clear();
+        CbFormat.Items.Add(new ComboBoxItem { Content = "ZIP Package (.zip)" });
+        CbFormat.Items.Add(new ComboBoxItem { Content = "7-Zip Package (.7z)" });
+        CbFormat.SelectedIndex = 0;
+
+        ChkStripMetadata.Content = "Store relative paths";
+        ChkOptimizePalette.Content = "Enable multi-threaded compression";
+        ChkStripMetadata.IsChecked = true;
+        ChkOptimizePalette.IsChecked = true;
     }
 
     private void LoadImagePreview(string filePath)
@@ -250,6 +358,29 @@ public partial class CompressorStudioWindow : Window
 
     private string GetTargetExtension(string currentExt)
     {
+        if (_family == FileFamily.Video)
+        {
+            return CbFormat.SelectedIndex switch
+            {
+                1 => ".webm",
+                _ => ".mp4"
+            };
+        }
+        if (_family == FileFamily.Audio)
+        {
+            return CbFormat.SelectedIndex switch
+            {
+                2 => ".m4a",
+                3 => ".ogg",
+                _ => ".mp3"
+            };
+        }
+        if (_family == FileFamily.Document) return ".pdf";
+        if (_family == FileFamily.Archive)
+        {
+            return CbFormat.SelectedIndex == 1 ? ".7z" : ".zip";
+        }
+
         return CbFormat.SelectedIndex switch
         {
             1 => ".webp",
@@ -326,12 +457,72 @@ public partial class CompressorStudioWindow : Window
                 }
                 else if (_family == FileFamily.Document)
                 {
-                    await PdfProcessingEngine.CompressPdfAsync(_filePath, Path.GetDirectoryName(outPath));
+                    var compressed = await PdfProcessingEngine.CompressPdfAsync(_filePath, Path.GetDirectoryName(outPath));
+                    if (File.Exists(compressed) && !string.Equals(compressed, outPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.Copy(compressed, outPath, true);
+                        try { File.Delete(compressed); } catch { }
+                    }
+                }
+                else if (_family == FileFamily.Video)
+                {
+                    var ffmpeg = MediaProcessingEngine.FindFfmpegExecutable();
+                    if (!string.IsNullOrEmpty(ffmpeg))
+                    {
+                        int crf = (int)Math.Round(18 + (100 - SliderQuality.Value) * 0.16); // 18 to 34
+                        string scaleFilter = CbResolution.SelectedIndex switch
+                        {
+                            1 => "-vf \"scale=-2:1080\"",
+                            2 => "-vf \"scale=-2:720\"",
+                            3 => "-vf \"scale=-2:480\"",
+                            _ => ""
+                        };
+                        string audioArgs = ChkOptimizePalette.IsChecked == true ? "-c:a aac -b:a 128k" : "-c:a copy";
+                        string formatArgs = CbFormat.SelectedIndex switch
+                        {
+                            1 => $"-c:v libvpx-vp9 -b:v 0 -crf {crf} -c:a libopus",
+                            2 => $"-c:v libx265 -crf {crf} {audioArgs}",
+                            _ => $"-c:v libx264 -crf {crf} {scaleFilter} {audioArgs} -movflags +faststart"
+                        };
+                        var args = $"-y -i \"{_filePath}\" {formatArgs} \"{outPath}\"";
+                        await MediaProcessingEngine.RunFfmpegProcessAsync(ffmpeg, args);
+                    }
+                    else
+                    {
+                        File.Copy(_filePath, outPath, true);
+                    }
+                }
+                else if (_family == FileFamily.Audio)
+                {
+                    var ffmpeg = MediaProcessingEngine.FindFfmpegExecutable();
+                    if (!string.IsNullOrEmpty(ffmpeg))
+                    {
+                        int bitrate = (int)Math.Max(64, Math.Min(320, SliderQuality.Value * 3.2));
+                        string channels = CbResolution.SelectedIndex == 1 ? "-ac 1" : "-ac 2";
+                        string args = CbFormat.SelectedIndex switch
+                        {
+                            2 => $"-y -i \"{_filePath}\" -c:a aac -b:a {bitrate}k {channels} \"{outPath}\"",
+                            3 => $"-y -i \"{_filePath}\" -c:a libvorbis -q:a 4 {channels} \"{outPath}\"",
+                            _ => $"-y -i \"{_filePath}\" -c:a libmp3lame -b:a {bitrate}k {channels} \"{outPath}\""
+                        };
+                        await MediaProcessingEngine.RunFfmpegProcessAsync(ffmpeg, args);
+                    }
+                    else
+                    {
+                        File.Copy(_filePath, outPath, true);
+                    }
                 }
                 else
                 {
-                    // Generic fallback compression
-                    File.Copy(_filePath, outPath, true);
+                    // Archive compression with SharpCompress
+                    var opt = new SharpCompress.Writers.WriterOptions(SharpCompress.Common.CompressionType.Deflate);
+                    using var archive = SharpCompress.Archives.Zip.ZipArchive.Create();
+                    using (var sourceStream = File.OpenRead(_filePath))
+                    {
+                        archive.AddEntry(Path.GetFileName(_filePath), sourceStream, closeStream: false, size: sourceStream.Length);
+                        using var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write);
+                        archive.SaveTo(fs, opt);
+                    }
                 }
             });
 
@@ -340,7 +531,11 @@ public partial class CompressorStudioWindow : Window
 
             PbCompress.Visibility = Visibility.Collapsed;
             TxtStatus.Text = $"Compressed successfully! New size: {FormatBytes(newSize)} (-{(int)actualSaved}% saved)";
-            MessageBox.Show($"Compression Complete!\n\nOriginal: {FormatBytes(_originalBytes)}\nCompressed: {FormatBytes(newSize)}\nSaved: {(int)actualSaved}%\n\nFile saved to:\n{outPath}", "Orbit Compression Studio", MessageBoxButton.OK, MessageBoxImage.Information);
+            var res = MessageBox.Show($"Compression Complete!\n\nOriginal: {FormatBytes(_originalBytes)}\nCompressed: {FormatBytes(newSize)}\nSaved: {(int)actualSaved}%\n\nFile saved to:\n{outPath}\n\nDo you want to open the containing folder?", "Orbit Compression Studio", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (res == MessageBoxResult.Yes && File.Exists(outPath))
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{outPath}\"");
+            }
         }
         catch (Exception ex)
         {

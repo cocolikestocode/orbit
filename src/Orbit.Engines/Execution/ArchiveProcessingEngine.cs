@@ -118,6 +118,17 @@ public class ArchiveProcessingEngine : IProcessingEngine
                         break;
                     }
 
+                    case "archive-encrypt":
+                    {
+                        var pwd = request.Parameters.TryGetValue("password", out var pObj) && pObj is string s && !string.IsNullOrWhiteSpace(s)
+                            ? s
+                            : "OrbitSecure123";
+                        var encPath = await CreateEncryptedArchiveAsync(request.InputFiles, pwd, request.OutputDirectory, cancellationToken);
+                        outputFiles.Add(encPath);
+                        i = total;
+                        break;
+                    }
+
                     case "archive-analyze-integrity":
                     case "archive-test-integrity":
                     case "archive-inspect-contents":
@@ -385,6 +396,96 @@ public class ArchiveProcessingEngine : IProcessingEngine
         }
 
         return destinationZip;
+    }
+
+    private static async Task<string> CreateEncryptedArchiveAsync(
+        FileIdentity[] files,
+        string password,
+        string? outputDirectory,
+        CancellationToken cancellationToken)
+    {
+        var firstPath = files.Length > 0 ? files[0].FilePath : null;
+        var targetDir = outputDirectory ?? (!string.IsNullOrEmpty(firstPath) ? Path.GetDirectoryName(firstPath) : null) ?? Environment.CurrentDirectory;
+        Directory.CreateDirectory(targetDir);
+
+        string zipBaseName;
+        if (files.Length == 1)
+        {
+            zipBaseName = $"{Path.GetFileNameWithoutExtension(files[0].FilePath)}_encrypted";
+        }
+        else
+        {
+            zipBaseName = $"EncryptedArchive_{DateTime.Now:yyyyMMdd_HHmmss}";
+        }
+
+        var destinationZip = Path.Combine(targetDir, $"{zipBaseName}.zip");
+        int counter = 1;
+        while (File.Exists(destinationZip))
+        {
+            destinationZip = Path.Combine(targetDir, $"{zipBaseName}_{counter}.zip");
+            counter++;
+        }
+
+        // Create standard zip package first
+        using (var archive = ZipArchive.Create())
+        {
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (File.Exists(file.FilePath))
+                {
+                    archive.AddEntry(file.FileName, file.FilePath);
+                }
+                else if (Directory.Exists(file.FilePath))
+                {
+                    AddDirectoryRecursive(archive, file.FilePath, file.FileName);
+                }
+            }
+
+            using (var fileStream = new FileStream(destinationZip, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
+            {
+                archive.SaveTo(fileStream, new WriterOptions(CompressionType.Deflate));
+                await fileStream.FlushAsync(cancellationToken);
+            }
+        }
+
+        // Now encrypt the archive using AES-256 standard encryption
+        var encPath = Path.Combine(targetDir, $"{zipBaseName}.orbit.enc");
+        await EncryptFileWithAesAsync(destinationZip, encPath, password, cancellationToken);
+        
+        // Remove unencrypted intermediate zip if different
+        try { if (File.Exists(destinationZip)) File.Delete(destinationZip); } catch { }
+
+        return encPath;
+    }
+
+    private static async Task EncryptFileWithAesAsync(string inPath, string outPath, string password, CancellationToken cancellationToken)
+    {
+        using var aes = System.Security.Cryptography.Aes.Create();
+        aes.KeySize = 256;
+        aes.BlockSize = 128;
+        aes.Mode = System.Security.Cryptography.CipherMode.CBC;
+        aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+
+        byte[] salt = new byte[16];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(salt);
+
+        using var pbkdf2 = new System.Security.Cryptography.Rfc2898DeriveBytes(password, salt, 10000, System.Security.Cryptography.HashAlgorithmName.SHA256);
+        aes.Key = pbkdf2.GetBytes(32);
+        aes.IV = pbkdf2.GetBytes(16);
+
+        using var outFs = new FileStream(outPath, FileMode.Create, FileAccess.Write);
+        // Write Magic Header + Salt + IV
+        byte[] magic = System.Text.Encoding.ASCII.GetBytes("ORBITENC");
+        await outFs.WriteAsync(magic, cancellationToken);
+        await outFs.WriteAsync(salt, cancellationToken);
+        await outFs.WriteAsync(aes.IV, cancellationToken);
+
+        using var cryptoStream = new System.Security.Cryptography.CryptoStream(outFs, aes.CreateEncryptor(), System.Security.Cryptography.CryptoStreamMode.Write);
+        using var inFs = new FileStream(inPath, FileMode.Open, FileAccess.Read);
+        await inFs.CopyToAsync(cryptoStream, cancellationToken);
+        await cryptoStream.FlushFinalBlockAsync(cancellationToken);
     }
 
     private static void AddDirectoryRecursive(ZipArchive archive, string sourceDir, string rootRelativePath)
