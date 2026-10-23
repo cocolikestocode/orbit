@@ -66,13 +66,13 @@ public partial class PdfStudioWindow : Window
         // Render high-res previews using PDFtoImage
         try
         {
-            using var fileStream = File.OpenRead(_currentPdfPath);
-            int count = PDFtoImage.Conversion.GetPageCount(fileStream);
+            var pdfBytes = File.ReadAllBytes(_currentPdfPath);
+            int count = PDFtoImage.Conversion.GetPageCount(pdfBytes);
 
             for (int i = 0; i < count; i++)
             {
                 using var ms = new MemoryStream();
-                PDFtoImage.Conversion.SavePng(ms, fileStream, page: i, options: new PDFtoImage.RenderOptions(150));
+                PDFtoImage.Conversion.SavePng(ms, pdfBytes, page: i, options: new PDFtoImage.RenderOptions(150));
                 ms.Position = 0;
 
                 var bmp = new BitmapImage();
@@ -89,8 +89,9 @@ public partial class PdfStudioWindow : Window
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Trace.WriteLine($"[PDF Studio] Error rendering previews: {ex.Message}");
             // Fallback lightweight page indicators if rendering stream had issues
             for (int i = 0; i < _document.PageCount; i++)
             {
@@ -100,7 +101,14 @@ public partial class PdfStudioWindow : Window
 
         if (_pages.Count > 0)
         {
+            LbThumbnails.SelectedIndex = -1;
             LbThumbnails.SelectedIndex = 0;
+            if (_pages[0].Image != null)
+            {
+                ActivePageImage.Source = _pages[0].Image;
+                ApplyZoom();
+                TxtCurrentPageInfo.Text = $"Selected: Page 1 of {_pages.Count}";
+            }
         }
     }
 
@@ -139,7 +147,7 @@ public partial class PdfStudioWindow : Window
         page.Rotate = (page.Rotate + deg) % 360;
         SetDirty(true);
         TxtStatus.Text = $"Rotated Page {idx + 1} by {deg}°";
-        RefreshCurrentPagePreview(idx);
+        RefreshCurrentPagePreview(idx, deg);
     }
 
     private void OnMoveUpClicked(object sender, RoutedEventArgs e)
@@ -301,11 +309,11 @@ public partial class PdfStudioWindow : Window
         }
     }
 
-    private void RefreshCurrentPagePreview(int idx)
+    private void RefreshCurrentPagePreview(int idx, int deg = 90)
     {
         if (ActivePageImage.Source is BitmapSource bs)
         {
-            var rotated = new TransformedBitmap(bs, new System.Windows.Media.RotateTransform(90));
+            var rotated = new TransformedBitmap(bs, new System.Windows.Media.RotateTransform(deg));
             rotated.Freeze();
             ActivePageImage.Source = rotated;
             if (idx >= 0 && idx < _pages.Count)

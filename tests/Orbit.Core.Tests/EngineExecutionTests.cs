@@ -313,6 +313,37 @@ public class EngineExecutionTests : IDisposable
         File.Exists(rotatedPath).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task PdfProcessingEngine_ShouldRenderPdfToImages()
+    {
+        var pdfEngine = new PdfProcessingEngine();
+        var testPdfPath = Path.Combine(_tempDir, "test_render.pdf");
+        using (var doc = new PdfSharpCore.Pdf.PdfDocument())
+        {
+            var p1 = doc.AddPage();
+            using (var gfx1 = PdfSharpCore.Drawing.XGraphics.FromPdfPage(p1))
+            {
+                var font = new PdfSharpCore.Drawing.XFont("Arial", 14, PdfSharpCore.Drawing.XFontStyle.Bold);
+                gfx1.DrawString("Hello PDF Rendering", font, PdfSharpCore.Drawing.XBrushes.Black, 50, 50);
+            }
+            doc.Save(testPdfPath);
+        }
+
+        var identity = _identifier.Identify(testPdfPath);
+        var req = new OperationRequest
+        {
+            OperationId = "doc-pdf-to-images",
+            InputFiles = new[] { identity }
+        };
+
+        var result = await pdfEngine.ExecuteAsync(req, new Progress<OperationProgress>());
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        result.OutputFiles.Should().NotBeEmpty();
+        var imgPath = result.OutputFiles[0];
+        new FileInfo(imgPath).Length.Should().BeGreaterThan(0);
+
+    }
+
     public void Dispose()
     {
         try

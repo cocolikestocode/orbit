@@ -304,6 +304,68 @@ public class ImageAnnotationWindowTests : IDisposable
         threadException.Should().BeNull("CompressorStudioWindow should instantiate and calculate estimates");
     }
 
+    [Fact]
+    public void ImageAnnotationWindow_ShouldSelectMoveAndResizeElements()
+    {
+        Exception? threadException = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                EnsureApplicationResources();
+
+                var window = new ImageAnnotationWindow();
+                var imgPath = Path.Combine(_tempDir, "select_test.png");
+                using (var img = new Image<Rgba32>(200, 200))
+                {
+                    img.SaveAsPng(imgPath);
+                }
+
+                window.LoadImage(imgPath);
+
+                // Add a drawn polyline (Pen)
+                var poly = new System.Windows.Shapes.Polyline
+                {
+                    Stroke = System.Windows.Media.Brushes.Red,
+                    StrokeThickness = 4.0
+                };
+                poly.Points.Add(new System.Windows.Point(20, 20));
+                poly.Points.Add(new System.Windows.Point(60, 60));
+                window.DrawingCanvas.Children.Add(poly);
+
+                // Select the polyline with Select tool (V)
+                window.SetTool(ImageAnnotationWindow.AnnotationTool.Select);
+                window.SelectElement(poly);
+
+                window.SelectionOverlayCanvas.Visibility.Should().Be(Visibility.Visible);
+                window.SelectionBorder.Width.Should().BeGreaterThan(0);
+                window.SelectionBorder.Height.Should().BeGreaterThan(0);
+
+                // Resize the polyline
+                var oldBounds = window.GetElementBounds(poly);
+                var newBounds = new Rect(oldBounds.X, oldBounds.Y, oldBounds.Width * 2, oldBounds.Height * 2);
+                window.ApplyElementBounds(poly, oldBounds, newBounds);
+
+                var resizedBounds = window.GetElementBounds(poly);
+                resizedBounds.Width.Should().BeApproximately(newBounds.Width, 1.0);
+                resizedBounds.Height.Should().BeApproximately(newBounds.Height, 1.0);
+
+                window.Close();
+            }
+            catch (Exception ex)
+            {
+                threadException = ex;
+            }
+        });
+
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join(TimeSpan.FromSeconds(5));
+
+        threadException.Should().BeNull("ImageAnnotationWindow should support selecting, moving and resizing elements");
+    }
+
     public void Dispose()
     {
         try

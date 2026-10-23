@@ -368,6 +368,37 @@
                                         </StackPanel>
                                     </Border>
                                 </Canvas>
+
+                                <!-- Dedicated Selection & Resize Handles Overlay -->
+                                <Canvas x:Name="SelectionOverlayCanvas"
+                                        Width="800" Height="600"
+                                        Visibility="Collapsed"
+                                        Background="{x:Null}"
+                                        ClipToBounds="False">
+                                    <!-- Selection Bounding Box -->
+                                    <Border x:Name="SelectionBorder"
+                                            BorderBrush="#FF7A1A"
+                                            BorderThickness="1.5"
+                                            Background="#0AEC6D24"
+                                            Cursor="SizeAll"
+                                            MouseDown="OnSelectionBorderMouseDown"
+                                            MouseMove="OnSelectionBorderMouseMove"
+                                            MouseUp="OnSelectionBorderMouseUp">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.35" Color="#000000"/>
+                                        </Border.Effect>
+                                    </Border>
+
+                                    <!-- 8 Resize Handles -->
+                                    <Ellipse x:Name="HandleTL" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNWSE" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="TopLeft"/>
+                                    <Ellipse x:Name="HandleTC" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNS" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="Top"/>
+                                    <Ellipse x:Name="HandleTR" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNESW" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="TopRight"/>
+                                    <Ellipse x:Name="HandleML" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeWE" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="Left"/>
+                                    <Ellipse x:Name="HandleMR" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeWE" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="Right"/>
+                                    <Ellipse x:Name="HandleBL" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNESW" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="BottomLeft"/>
+                                    <Ellipse x:Name="HandleBC" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNS" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="Bottom"/>
+                                    <Ellipse x:Name="HandleBR" Width="10" Height="10" Fill="White" Stroke="#FF7A1A" StrokeThickness="1.8" Cursor="SizeNWSE" MouseDown="OnHandleMouseDown" MouseMove="OnHandleMouseMove" MouseUp="OnHandleMouseUp" Tag="BottomRight"/>
+                                </Canvas>
                             </Grid>
                         </Border>
                     </Grid>

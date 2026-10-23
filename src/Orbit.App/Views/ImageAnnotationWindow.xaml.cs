@@ -58,8 +58,27 @@ public partial class ImageAnnotationWindow : Window
     private FrameworkElement? _selectedElement;
     private bool _isDraggingElement;
     private Point _elementDragStart;
-    private double _elementOriginalLeft;
-    private double _elementOriginalTop;
+    private Rect _elementOriginalBounds;
+
+    private enum ResizeHandle
+    {
+        None,
+        TopLeft,
+        Top,
+        TopRight,
+        Right,
+        BottomRight,
+        Bottom,
+        BottomLeft,
+        Left
+    }
+
+    private ResizeHandle _activeResizeHandle = ResizeHandle.None;
+    private Point _resizeStartMouse;
+    private Rect _resizeStartBounds;
+    private List<Point>? _origPolyPoints;
+    private (double X1, double Y1, double X2, double Y2) _origArrowLine;
+    private List<Point>? _origHeadPoints;
 
     // Watermark state (Disabled by default)
     private bool _isWatermarkActive = false;
@@ -126,6 +145,11 @@ public partial class ImageAnnotationWindow : Window
         BaseImageElement.Source = bitmap;
         DrawingCanvas.Width = bitmap.PixelWidth;
         DrawingCanvas.Height = bitmap.PixelHeight;
+        if (SelectionOverlayCanvas != null)
+        {
+            SelectionOverlayCanvas.Width = bitmap.PixelWidth;
+            SelectionOverlayCanvas.Height = bitmap.PixelHeight;
+        }
 
         if (clearAnnotations)
         {
@@ -268,6 +292,11 @@ public partial class ImageAnnotationWindow : Window
     {
         _currentTool = tool;
         UpdateToolSelection(tool);
+
+        if (tool != AnnotationTool.Select)
+        {
+            SelectElement(null);
+        }
 
         if (tool == AnnotationTool.Crop)
         {
@@ -454,10 +483,16 @@ public partial class ImageAnnotationWindow : Window
             {
                 _isDraggingElement = true;
                 _elementDragStart = pos;
-                _elementOriginalLeft = Canvas.GetLeft(hit);
-                _elementOriginalTop = Canvas.GetTop(hit);
-                if (double.IsNaN(_elementOriginalLeft)) _elementOriginalLeft = 0;
-                if (double.IsNaN(_elementOriginalTop)) _elementOriginalTop = 0;
+                _elementOriginalBounds = GetElementBounds(hit);
+                if (hit is Polyline poly)
+                {
+                    _origPolyPoints = poly.Points.ToList();
+                }
+                else if (hit is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line && c.Children[1] is Polygon head)
+                {
+                    _origArrowLine = (line.X1, line.Y1, line.X2, line.Y2);
+                    _origHeadPoints = head.Points.ToList();
+                }
                 DrawingCanvas.CaptureMouse();
             }
             return;
@@ -499,8 +534,8 @@ public partial class ImageAnnotationWindow : Window
         {
             double dx = cur.X - _elementDragStart.X;
             double dy = cur.Y - _elementDragStart.Y;
-            Canvas.SetLeft(_selectedElement, _elementOriginalLeft + dx);
-            Canvas.SetTop(_selectedElement, _elementOriginalTop + dy);
+            MoveElementTo(_selectedElement, _elementOriginalBounds, dx, dy);
+            UpdateSelectionOverlay();
             SetDirty(true);
             return;
         }
@@ -524,6 +559,15 @@ public partial class ImageAnnotationWindow : Window
         {
             _isDraggingElement = false;
             DrawingCanvas.ReleaseMouseCapture();
+            if (_selectedElement != null)
+            {
+                var finalBounds = GetElementBounds(_selectedElement);
+                if (finalBounds != _elementOriginalBounds)
+                {
+                    _undoStack.Push(new ElementBoundsAction(_selectedElement, _elementOriginalBounds, finalBounds, this));
+                    UpdateUndoRedoState();
+                }
+            }
             return;
         }
 
@@ -890,7 +934,7 @@ public partial class ImageAnnotationWindow : Window
         }
     }
 
-    private void SelectElement(FrameworkElement? element)
+    internal void SelectElement(FrameworkElement? element)
     {
         if (_selectedElement != null)
         {
@@ -900,13 +944,103 @@ public partial class ImageAnnotationWindow : Window
         _selectedElement = element;
         if (_selectedElement != null)
         {
-            _selectedElement.Opacity = 0.85;
             if (BtnDeleteSelected != null) BtnDeleteSelected.IsEnabled = true;
+            UpdateSelectionOverlay();
         }
         else
         {
             if (BtnDeleteSelected != null) BtnDeleteSelected.IsEnabled = false;
+            if (SelectionOverlayCanvas != null) SelectionOverlayCanvas.Visibility = Visibility.Collapsed;
         }
+    }
+
+    internal Rect GetElementBounds(FrameworkElement fe)
+    {
+        if (fe is Polyline poly)
+        {
+            if (poly.Points.Count == 0) return Rect.Empty;
+            double minX = double.MaxValue, maxX = double.MinValue;
+            double minY = double.MaxValue, maxY = double.MinValue;
+            foreach (var pt in poly.Points)
+            {
+                if (pt.X < minX) minX = pt.X;
+                if (pt.X > maxX) maxX = pt.X;
+                if (pt.Y < minY) minY = pt.Y;
+                if (pt.Y > maxY) maxY = pt.Y;
+            }
+            return new Rect(minX, minY, Math.Max(16, maxX - minX), Math.Max(16, maxY - minY));
+        }
+
+        if (fe is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line)
+        {
+            double minX = Math.Min(line.X1, line.X2);
+            double maxX = Math.Max(line.X1, line.X2);
+            double minY = Math.Min(line.Y1, line.Y2);
+            double maxY = Math.Max(line.Y1, line.Y2);
+            return new Rect(minX, minY, Math.Max(16, maxX - minX), Math.Max(16, maxY - minY));
+        }
+
+        double left = Canvas.GetLeft(fe);
+        double top = Canvas.GetTop(fe);
+        if (double.IsNaN(left)) left = 0;
+        if (double.IsNaN(top)) top = 0;
+
+        double w = !double.IsNaN(fe.Width) && fe.Width > 0 ? fe.Width : (fe.ActualWidth > 0 ? fe.ActualWidth : 40);
+        double h = !double.IsNaN(fe.Height) && fe.Height > 0 ? fe.Height : (fe.ActualHeight > 0 ? fe.ActualHeight : 40);
+
+        return new Rect(left, top, w, h);
+    }
+
+    private void UpdateSelectionOverlay()
+    {
+        if (_selectedElement == null || SelectionOverlayCanvas == null)
+        {
+            if (SelectionOverlayCanvas != null) SelectionOverlayCanvas.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var bounds = GetElementBounds(_selectedElement);
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            SelectionOverlayCanvas.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        SelectionOverlayCanvas.Width = DrawingCanvas.Width;
+        SelectionOverlayCanvas.Height = DrawingCanvas.Height;
+        SelectionOverlayCanvas.Visibility = Visibility.Visible;
+
+        Canvas.SetLeft(SelectionBorder, bounds.X);
+        Canvas.SetTop(SelectionBorder, bounds.Y);
+        SelectionBorder.Width = bounds.Width;
+        SelectionBorder.Height = bounds.Height;
+
+        double hOffset = 5.0; // half of 10px handle
+        // Corners
+        Canvas.SetLeft(HandleTL, bounds.Left - hOffset);
+        Canvas.SetTop(HandleTL, bounds.Top - hOffset);
+
+        Canvas.SetLeft(HandleTR, bounds.Right - hOffset);
+        Canvas.SetTop(HandleTR, bounds.Top - hOffset);
+
+        Canvas.SetLeft(HandleBL, bounds.Left - hOffset);
+        Canvas.SetTop(HandleBL, bounds.Bottom - hOffset);
+
+        Canvas.SetLeft(HandleBR, bounds.Right - hOffset);
+        Canvas.SetTop(HandleBR, bounds.Bottom - hOffset);
+
+        // Edges
+        Canvas.SetLeft(HandleTC, bounds.Left + bounds.Width / 2.0 - hOffset);
+        Canvas.SetTop(HandleTC, bounds.Top - hOffset);
+
+        Canvas.SetLeft(HandleBC, bounds.Left + bounds.Width / 2.0 - hOffset);
+        Canvas.SetTop(HandleBC, bounds.Bottom - hOffset);
+
+        Canvas.SetLeft(HandleML, bounds.Left - hOffset);
+        Canvas.SetTop(HandleML, bounds.Top + bounds.Height / 2.0 - hOffset);
+
+        Canvas.SetLeft(HandleMR, bounds.Right - hOffset);
+        Canvas.SetTop(HandleMR, bounds.Top + bounds.Height / 2.0 - hOffset);
     }
 
     private FrameworkElement? FindAnnotationElementUnderMouse(Point pos)
@@ -918,19 +1052,277 @@ public partial class ImageAnnotationWindow : Window
 
             if (child is FrameworkElement fe)
             {
-                double left = Canvas.GetLeft(fe);
-                double top = Canvas.GetTop(fe);
-                if (double.IsNaN(left)) left = 0;
-                if (double.IsNaN(top)) top = 0;
-
-                var bounds = new Rect(left, top, Math.Max(10, fe.ActualWidth), Math.Max(10, fe.ActualHeight));
-                if (bounds.Contains(pos))
+                var bounds = GetElementBounds(fe);
+                var inflated = bounds;
+                inflated.Inflate(8, 8);
+                if (inflated.Contains(pos))
                 {
                     return fe;
                 }
             }
         }
         return null;
+    }
+
+    private void OnSelectionBorderMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_selectedElement == null) return;
+        _isDraggingElement = true;
+        _elementDragStart = e.GetPosition(DrawingCanvas);
+        _elementOriginalBounds = GetElementBounds(_selectedElement);
+
+        if (_selectedElement is Polyline poly)
+        {
+            _origPolyPoints = poly.Points.ToList();
+        }
+        else if (_selectedElement is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line && c.Children[1] is Polygon head)
+        {
+            _origArrowLine = (line.X1, line.Y1, line.X2, line.Y2);
+            _origHeadPoints = head.Points.ToList();
+        }
+
+        SelectionBorder.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void OnSelectionBorderMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isDraggingElement && _selectedElement != null)
+        {
+            var cur = e.GetPosition(DrawingCanvas);
+            double dx = cur.X - _elementDragStart.X;
+            double dy = cur.Y - _elementDragStart.Y;
+            MoveElementTo(_selectedElement, _elementOriginalBounds, dx, dy);
+            UpdateSelectionOverlay();
+            SetDirty(true);
+            e.Handled = true;
+        }
+    }
+
+    private void OnSelectionBorderMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isDraggingElement)
+        {
+            _isDraggingElement = false;
+            SelectionBorder.ReleaseMouseCapture();
+            if (_selectedElement != null)
+            {
+                var finalBounds = GetElementBounds(_selectedElement);
+                if (finalBounds != _elementOriginalBounds)
+                {
+                    _undoStack.Push(new ElementBoundsAction(_selectedElement, _elementOriginalBounds, finalBounds, this));
+                    UpdateUndoRedoState();
+                }
+            }
+            e.Handled = true;
+        }
+    }
+
+    private void OnHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_selectedElement == null || sender is not FrameworkElement fe || fe.Tag is not string tagStr) return;
+        if (Enum.TryParse<ResizeHandle>(tagStr, out var handle))
+        {
+            _activeResizeHandle = handle;
+            _resizeStartMouse = e.GetPosition(DrawingCanvas);
+            _resizeStartBounds = GetElementBounds(_selectedElement);
+
+            if (_selectedElement is Polyline poly)
+            {
+                _origPolyPoints = poly.Points.ToList();
+            }
+            else if (_selectedElement is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line && c.Children[1] is Polygon head)
+            {
+                _origArrowLine = (line.X1, line.Y1, line.X2, line.Y2);
+                _origHeadPoints = head.Points.ToList();
+            }
+
+            fe.CaptureMouse();
+            e.Handled = true;
+        }
+    }
+
+    private void OnHandleMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_activeResizeHandle != ResizeHandle.None && _selectedElement != null)
+        {
+            var cur = e.GetPosition(DrawingCanvas);
+            double dx = cur.X - _resizeStartMouse.X;
+            double dy = cur.Y - _resizeStartMouse.Y;
+            var newBounds = CalculateResizedBounds(_resizeStartBounds, _activeResizeHandle, dx, dy);
+            ResizeElementTo(_selectedElement, _resizeStartBounds, newBounds);
+            UpdateSelectionOverlay();
+            SetDirty(true);
+            e.Handled = true;
+        }
+    }
+
+    private void OnHandleMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_activeResizeHandle != ResizeHandle.None)
+        {
+            if (sender is FrameworkElement fe) fe.ReleaseMouseCapture();
+            _activeResizeHandle = ResizeHandle.None;
+            if (_selectedElement != null)
+            {
+                var finalBounds = GetElementBounds(_selectedElement);
+                if (finalBounds != _resizeStartBounds)
+                {
+                    _undoStack.Push(new ElementBoundsAction(_selectedElement, _resizeStartBounds, finalBounds, this));
+                    UpdateUndoRedoState();
+                }
+            }
+            e.Handled = true;
+        }
+    }
+
+    private void MoveElementTo(FrameworkElement fe, Rect origBounds, double dx, double dy)
+    {
+        if (fe is Polyline poly)
+        {
+            var basePoints = (_origPolyPoints != null && _origPolyPoints.Count == poly.Points.Count)
+                ? _origPolyPoints
+                : poly.Points.ToList();
+
+            for (int i = 0; i < poly.Points.Count; i++)
+            {
+                poly.Points[i] = new Point(basePoints[i].X + dx, basePoints[i].Y + dy);
+            }
+            return;
+        }
+
+        if (fe is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line && c.Children[1] is Polygon head)
+        {
+            var origLine = _origArrowLine != default ? _origArrowLine : (line.X1, line.Y1, line.X2, line.Y2);
+            var headPoints = (_origHeadPoints != null && _origHeadPoints.Count == head.Points.Count)
+                ? _origHeadPoints
+                : head.Points.ToList();
+
+            line.X1 = origLine.X1 + dx;
+            line.Y1 = origLine.Y1 + dy;
+            line.X2 = origLine.X2 + dx;
+            line.Y2 = origLine.Y2 + dy;
+            for (int i = 0; i < head.Points.Count; i++)
+            {
+                head.Points[i] = new Point(headPoints[i].X + dx, headPoints[i].Y + dy);
+            }
+            return;
+        }
+
+        Canvas.SetLeft(fe, origBounds.X + dx);
+        Canvas.SetTop(fe, origBounds.Y + dy);
+
+        if (fe is Rectangle r && r.Fill is VisualBrush vb)
+        {
+            vb.Viewbox = new Rect(origBounds.X + dx, origBounds.Y + dy, origBounds.Width, origBounds.Height);
+        }
+    }
+
+    private void ResizeElementTo(FrameworkElement fe, Rect origBounds, Rect newBounds)
+    {
+        if (fe is Polyline poly)
+        {
+            var basePoints = (_origPolyPoints != null && _origPolyPoints.Count == poly.Points.Count)
+                ? _origPolyPoints
+                : poly.Points.ToList();
+
+            double sx = newBounds.Width / Math.Max(1.0, origBounds.Width);
+            double sy = newBounds.Height / Math.Max(1.0, origBounds.Height);
+            for (int i = 0; i < poly.Points.Count; i++)
+            {
+                double relX = basePoints[i].X - origBounds.Left;
+                double relY = basePoints[i].Y - origBounds.Top;
+                poly.Points[i] = new Point(newBounds.Left + relX * sx, newBounds.Top + relY * sy);
+            }
+            return;
+        }
+
+        if (fe is Canvas c && c.Children.Count >= 2 && c.Children[0] is Line line && c.Children[1] is Polygon head)
+        {
+            var origLine = _origArrowLine != default ? _origArrowLine : (line.X1, line.Y1, line.X2, line.Y2);
+            double sx = newBounds.Width / Math.Max(1.0, origBounds.Width);
+            double sy = newBounds.Height / Math.Max(1.0, origBounds.Height);
+            line.X1 = newBounds.Left + (origLine.X1 - origBounds.Left) * sx;
+            line.Y1 = newBounds.Top + (origLine.Y1 - origBounds.Top) * sy;
+            line.X2 = newBounds.Left + (origLine.X2 - origBounds.Left) * sx;
+            line.Y2 = newBounds.Top + (origLine.Y2 - origBounds.Top) * sy;
+
+            double angle = Math.Atan2(line.Y2 - line.Y1, line.X2 - line.X1);
+            double headLen = Math.Max(12, _strokeThickness * 3.5);
+            double headAngle = Math.PI / 6;
+
+            Point p1 = new(line.X2, line.Y2);
+            Point p2 = new(line.X2 - headLen * Math.Cos(angle - headAngle), line.Y2 - headLen * Math.Sin(angle - headAngle));
+            Point p3 = new(line.X2 - headLen * Math.Cos(angle + headAngle), line.Y2 - headLen * Math.Sin(angle + headAngle));
+            head.Points = [p1, p2, p3];
+            return;
+        }
+
+        Canvas.SetLeft(fe, newBounds.Left);
+        Canvas.SetTop(fe, newBounds.Top);
+        fe.Width = Math.Max(10, newBounds.Width);
+        fe.Height = Math.Max(10, newBounds.Height);
+
+        if (fe is Rectangle r && r.Fill is VisualBrush vb)
+        {
+            vb.Viewbox = new Rect(newBounds.Left, newBounds.Top, newBounds.Width, newBounds.Height);
+        }
+    }
+
+    private static Rect CalculateResizedBounds(Rect orig, ResizeHandle handle, double dx, double dy)
+    {
+        double minSize = 15;
+        double l = orig.Left;
+        double t = orig.Top;
+        double w = orig.Width;
+        double h = orig.Height;
+
+        switch (handle)
+        {
+            case ResizeHandle.TopLeft:
+                w = Math.Max(minSize, orig.Width - dx);
+                h = Math.Max(minSize, orig.Height - dy);
+                l = orig.Right - w;
+                t = orig.Bottom - h;
+                break;
+            case ResizeHandle.Top:
+                h = Math.Max(minSize, orig.Height - dy);
+                t = orig.Bottom - h;
+                break;
+            case ResizeHandle.TopRight:
+                w = Math.Max(minSize, orig.Width + dx);
+                h = Math.Max(minSize, orig.Height - dy);
+                t = orig.Bottom - h;
+                break;
+            case ResizeHandle.Right:
+                w = Math.Max(minSize, orig.Width + dx);
+                break;
+            case ResizeHandle.BottomRight:
+                w = Math.Max(minSize, orig.Width + dx);
+                h = Math.Max(minSize, orig.Height + dy);
+                break;
+            case ResizeHandle.Bottom:
+                h = Math.Max(minSize, orig.Height + dy);
+                break;
+            case ResizeHandle.BottomLeft:
+                w = Math.Max(minSize, orig.Width - dx);
+                h = Math.Max(minSize, orig.Height + dy);
+                l = orig.Right - w;
+                break;
+            case ResizeHandle.Left:
+                w = Math.Max(minSize, orig.Width - dx);
+                l = orig.Right - w;
+                break;
+        }
+
+        return new Rect(l, t, w, h);
+    }
+
+    internal void ApplyElementBounds(FrameworkElement fe, Rect fromBounds, Rect toBounds)
+    {
+        ResizeElementTo(fe, fromBounds, toBounds);
+        UpdateSelectionOverlay();
+        SetDirty(true);
     }
 
     private void DeleteSelectedElement()
@@ -1689,6 +2081,10 @@ public partial class ImageAnnotationWindow : Window
         {
             del.Undo();
         }
+        else if (item is ElementBoundsAction boundsAction)
+        {
+            boundsAction.Undo();
+        }
         else
         {
             DrawingCanvas.Children.Remove(item);
@@ -1719,6 +2115,10 @@ public partial class ImageAnnotationWindow : Window
         else if (item is DeletedAnnotationAction del)
         {
             del.Redo();
+        }
+        else if (item is ElementBoundsAction boundsAction)
+        {
+            boundsAction.Redo();
         }
         else
         {
@@ -2083,6 +2483,32 @@ public partial class ImageAnnotationWindow : Window
         public void Redo()
         {
             _canvas.Children.Remove(_element);
+        }
+    }
+
+    private sealed class ElementBoundsAction : UIElement
+    {
+        public FrameworkElement Element { get; }
+        public Rect OldBounds { get; }
+        public Rect NewBounds { get; }
+        public ImageAnnotationWindow Window { get; }
+
+        public ElementBoundsAction(FrameworkElement element, Rect oldBounds, Rect newBounds, ImageAnnotationWindow window)
+        {
+            Element = element;
+            OldBounds = oldBounds;
+            NewBounds = newBounds;
+            Window = window;
+        }
+
+        public void Undo()
+        {
+            Window.ApplyElementBounds(Element, NewBounds, OldBounds);
+        }
+
+        public void Redo()
+        {
+            Window.ApplyElementBounds(Element, OldBounds, NewBounds);
         }
     }
 }

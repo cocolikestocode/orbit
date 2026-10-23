@@ -641,14 +641,13 @@ public class PdfProcessingEngine : IProcessingEngine
 
         await Task.Run(() =>
         {
-            using var fileStream = File.OpenRead(pdfPath);
-            int pageCount = PDFtoImage.Conversion.GetPageCount(fileStream);
+            var pdfBytes = File.ReadAllBytes(pdfPath);
+            int pageCount = PDFtoImage.Conversion.GetPageCount(pdfBytes);
             for (int i = 0; i < pageCount; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var outPath = Path.Combine(targetDir, $"{baseName}_page_{i + 1}.png");
-                using var outStream = File.Create(outPath);
-                PDFtoImage.Conversion.SavePng(outStream, fileStream, page: i, options: new PDFtoImage.RenderOptions(300));
+                PDFtoImage.Conversion.SavePng(outPath, pdfBytes, page: i, options: new PDFtoImage.RenderOptions(300));
                 results.Add(outPath);
             }
         }, cancellationToken);
