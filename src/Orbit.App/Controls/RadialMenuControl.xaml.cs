@@ -247,8 +247,8 @@ public partial class RadialMenuControl : UserControl
                 }
             }
         }
-        // Check Action Ring (from ActionInnerRadius to outer boundary)
-        else if (distance >= ActionInnerRadius && distance <= 265)
+        // Check Action Ring (from ActionInnerRadius outward)
+        else if (distance >= ActionInnerRadius)
         {
             bool foundAction = false;
             foreach (var visual in _actionVisuals)
@@ -265,11 +265,6 @@ public partial class RadialMenuControl : UserControl
             {
                 ClearActionHighlight();
             }
-        }
-        else
-        {
-            // Outside of action/category bounds (cancel/neutral zone)
-            ClearActionHighlight();
         }
     }
 

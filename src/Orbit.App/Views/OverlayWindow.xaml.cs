@@ -135,9 +135,26 @@ public partial class OverlayWindow : Window
         Show();
     }
 
+    private bool _isCommitting = false;
+
     public void SetFiles(string[] paths)
     {
         if (paths == null || paths.Length == 0) return;
+
+        // Prevent redundant recreation if current files already match
+        if (_currentFiles.Length > 0 && _currentFiles.Length == paths.Length)
+        {
+            bool identical = true;
+            for (int i = 0; i < paths.Length; i++)
+            {
+                if (!string.Equals(_currentFiles[i].FilePath, paths[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    identical = false;
+                    break;
+                }
+            }
+            if (identical) return;
+        }
 
         _currentFiles = _fileIdentifier.IdentifyMultiple(paths);
         var capabilities = _capabilityResolver.Resolve(_currentFiles);
@@ -168,14 +185,24 @@ public partial class OverlayWindow : Window
     {
         Hide();
         _currentFiles = Array.Empty<FileIdentity>();
+        _isCommitting = false;
     }
 
     private void OnActionCommitted(OperationDefinition operation)
     {
-        var targetFiles = _currentFiles;
-        Dismiss();
+        if (_isCommitting || !IsVisible) return;
+        _isCommitting = true;
 
-        OperationSelected?.Invoke(operation, targetFiles);
+        try
+        {
+            var targetFiles = _currentFiles;
+            Dismiss();
+            OperationSelected?.Invoke(operation, targetFiles);
+        }
+        finally
+        {
+            _isCommitting = false;
+        }
     }
 
     private void OnMenuCancelled()
@@ -188,10 +215,17 @@ public partial class OverlayWindow : Window
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             e.Effects = DragDropEffects.Copy;
-            var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (paths != null && paths.Length > 0)
+
+            // Only populate if not already populated from ShowAt / ShellSelectionHelper.
+            // WPF raises DragEnter repeatedly as the cursor moves across child elements (wedges, text, hub).
+            // Calling SetFiles repeatedly would destroy the visual tree and reset the radial menu while dragging.
+            if (_currentFiles == null || _currentFiles.Length == 0)
             {
-                SetFiles(paths);
+                var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (paths != null && paths.Length > 0)
+                {
+                    SetFiles(paths);
+                }
             }
         }
         else
@@ -229,12 +263,15 @@ public partial class OverlayWindow : Window
         {
             e.Effects = DragDropEffects.Copy;
             var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (paths != null && paths.Length > 0 && _currentFiles.Length == 0)
+            if (paths != null && paths.Length > 0 && (_currentFiles == null || _currentFiles.Length == 0))
             {
                 SetFiles(paths);
             }
 
-            RadialMenu.CommitCurrentSelection();
+            if (!_isCommitting)
+            {
+                RadialMenu.CommitCurrentSelection();
+            }
         }
 
         e.Handled = true;
