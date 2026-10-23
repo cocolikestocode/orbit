@@ -74,12 +74,196 @@ public partial class PdfStudioWindow : Window
     private Point _dragStartPoint;
     private PageItem? _draggedThumbnailItem;
 
+    #region Undo / Redo Infrastructure
+
+    private interface IPdfStudioAction
+    {
+        void Undo();
+        void Redo();
+    }
+
+    private class AddMarkupAction : IPdfStudioAction
+    {
+        private readonly Canvas _canvas;
+        private readonly UIElement _element;
+        private readonly PdfStudioWindow _window;
+
+        public AddMarkupAction(Canvas canvas, UIElement element, PdfStudioWindow window)
+        {
+            _canvas = canvas;
+            _element = element;
+            _window = window;
+        }
+
+        public void Undo()
+        {
+            if (_canvas.Children.Contains(_element))
+            {
+                _canvas.Children.Remove(_element);
+            }
+            _window.DeselectCurrentElement();
+            _window.SetDirty(true);
+        }
+
+        public void Redo()
+        {
+            if (!_canvas.Children.Contains(_element))
+            {
+                _canvas.Children.Add(_element);
+            }
+            _window.SelectElement(_element);
+            _window.SetDirty(true);
+        }
+    }
+
+    private class DeleteMarkupAction : IPdfStudioAction
+    {
+        private readonly Canvas _canvas;
+        private readonly UIElement _element;
+        private readonly PdfStudioWindow _window;
+
+        public DeleteMarkupAction(Canvas canvas, UIElement element, PdfStudioWindow window)
+        {
+            _canvas = canvas;
+            _element = element;
+            _window = window;
+        }
+
+        public void Undo()
+        {
+            if (!_canvas.Children.Contains(_element))
+            {
+                _canvas.Children.Add(_element);
+            }
+            _window.SelectElement(_element);
+            _window.SetDirty(true);
+        }
+
+        public void Redo()
+        {
+            if (_canvas.Children.Contains(_element))
+            {
+                _canvas.Children.Remove(_element);
+            }
+            _window.DeselectCurrentElement();
+            _window.SetDirty(true);
+        }
+    }
+
+    private class MoveResizeAction : IPdfStudioAction
+    {
+        private readonly FrameworkElement _element;
+        private readonly Rect _oldBounds;
+        private readonly Rect _newBounds;
+        private readonly List<Point>? _oldPoints;
+        private readonly List<Point>? _newPoints;
+        private readonly PdfStudioWindow _window;
+
+        public MoveResizeAction(FrameworkElement element, Rect oldBounds, Rect newBounds, List<Point>? oldPoints, List<Point>? newPoints, PdfStudioWindow window)
+        {
+            _element = element;
+            _oldBounds = oldBounds;
+            _newBounds = newBounds;
+            _oldPoints = oldPoints;
+            _newPoints = newPoints;
+            _window = window;
+        }
+
+        public void Undo() => Apply(_oldBounds, _oldPoints);
+        public void Redo() => Apply(_newBounds, _newPoints);
+
+        private void Apply(Rect b, List<Point>? pts)
+        {
+            if (_element is Polyline poly && pts != null)
+            {
+                poly.Points = new PointCollection(pts);
+            }
+            else
+            {
+                Canvas.SetLeft(_element, b.X);
+                Canvas.SetTop(_element, b.Y);
+                _element.Width = b.Width;
+                _element.Height = b.Height;
+                if (_element is Border border && border.Child is Image img)
+                {
+                    img.Width = b.Width;
+                    img.Height = b.Height;
+                }
+            }
+            _window.SelectElement(_element);
+            _window.SetDirty(true);
+        }
+    }
+
+    private class RotatePagesAction : IPdfStudioAction
+    {
+        private readonly List<int> _pageIndices;
+        private readonly int _angleDelta;
+        private readonly PdfStudioWindow _window;
+
+        public RotatePagesAction(List<int> pageIndices, int angleDelta, PdfStudioWindow window)
+        {
+            _pageIndices = pageIndices;
+            _angleDelta = angleDelta;
+            _window = window;
+        }
+
+        public void Undo() => _window.RotatePagesInternal(_pageIndices, 360 - (_angleDelta % 360), recordUndo: false);
+        public void Redo() => _window.RotatePagesInternal(_pageIndices, _angleDelta % 360, recordUndo: false);
+    }
+
+    private readonly Stack<IPdfStudioAction> _undoStack = new();
+    private readonly Stack<IPdfStudioAction> _redoStack = new();
+
+    private void PushAction(IPdfStudioAction action)
+    {
+        _undoStack.Push(action);
+        _redoStack.Clear();
+        UpdateUndoRedoButtonsState();
+    }
+
+    private void OnUndoClicked(object sender, RoutedEventArgs e)
+    {
+        if (_undoStack.Count > 0)
+        {
+            var action = _undoStack.Pop();
+            action.Undo();
+            _redoStack.Push(action);
+            UpdateUndoRedoButtonsState();
+            TxtStatus.Text = "Undone last action.";
+        }
+    }
+
+    private void OnRedoClicked(object sender, RoutedEventArgs e)
+    {
+        if (_redoStack.Count > 0)
+        {
+            var action = _redoStack.Pop();
+            action.Redo();
+            _undoStack.Push(action);
+            UpdateUndoRedoButtonsState();
+            TxtStatus.Text = "Redone action.";
+        }
+    }
+
+    private void UpdateUndoRedoButtonsState()
+    {
+        if (BtnUndo != null) BtnUndo.IsEnabled = _undoStack.Count > 0;
+        if (BtnRedo != null) BtnRedo.IsEnabled = _redoStack.Count > 0;
+    }
+
+    #endregion
+
     public PdfStudioWindow()
     {
         InitializeComponent();
         LbThumbnails.ItemsSource = _pages;
         Closing += OnWindowClosing;
-        Loaded += (s, e) => ApplyZoom();
+        Loaded += (s, e) =>
+        {
+            ApplyZoom();
+            UpdateUndoRedoButtonsState();
+        };
     }
 
     public void LoadPdf(string pdfPath)
@@ -153,7 +337,9 @@ public partial class PdfStudioWindow : Window
     private void SetDirty(bool dirty)
     {
         _isDirty = dirty;
-        BadgeDirty.Visibility = dirty ? Visibility.Visible : Visibility.Collapsed;
+        if (BadgeDirty != null) BadgeDirty.Visibility = dirty ? Visibility.Visible : Visibility.Collapsed;
+        var fileName = !string.IsNullOrEmpty(_currentPdfPath) ? System.IO.Path.GetFileName(_currentPdfPath) : "Untitled";
+        Title = dirty ? $"Orbit — PDF Studio * {fileName}" : $"Orbit — PDF Studio • {fileName}";
     }
 
     #region Thumbnail Selection & Page Switching
@@ -365,19 +551,33 @@ public partial class PdfStudioWindow : Window
 
         if (selected.Count == 0) return;
 
-        foreach (var item in selected)
+        var indices = selected.Select(p => p.PageIndex).ToList();
+        RotatePagesInternal(indices, deg, recordUndo: true);
+    }
+
+    public void RotatePagesInternal(List<int> pageIndices, int deg, bool recordUndo = true)
+    {
+        if (_document == null || _pages.Count == 0) return;
+
+        foreach (var idx in pageIndices)
         {
-            int idx = item.PageIndex;
             if (idx >= 0 && idx < _document.PageCount)
             {
                 var page = _document.Pages[idx];
-                page.Rotate = (page.Rotate + deg) % 360;
+                int norm = (page.Rotate + deg) % 360;
+                if (norm < 0) norm += 360;
+                page.Rotate = norm;
                 RefreshPagePreview(idx, deg);
             }
         }
 
+        if (recordUndo)
+        {
+            PushAction(new RotatePagesAction(pageIndices, deg, this));
+        }
+
         SetDirty(true);
-        TxtStatus.Text = $"Rotated {selected.Count} page(s) by {deg}°";
+        TxtStatus.Text = $"Rotated {pageIndices.Count} page(s) by {deg}°";
     }
 
     private void RefreshPagePreview(int idx, int deg = 90)
@@ -681,76 +881,27 @@ public partial class PdfStudioWindow : Window
         }
     }
 
-    private bool _isUpdatingColorPickerInternal;
-
     private void OnCustomColorButtonClicked(object sender, RoutedEventArgs e)
     {
-        _isUpdatingColorPickerInternal = true;
-        SliderRed.Value = _currentColor.R;
-        SliderGreen.Value = _currentColor.G;
-        SliderBlue.Value = _currentColor.B;
-        TxtRedVal.Text = _currentColor.R.ToString();
-        TxtGreenVal.Text = _currentColor.G.ToString();
-        TxtBlueVal.Text = _currentColor.B.ToString();
-        TxtHexColor.Text = $"#{_currentColor.R:X2}{_currentColor.G:X2}{_currentColor.B:X2}";
-        PickerPreviewBox.Background = new SolidColorBrush(_currentColor);
-        _isUpdatingColorPickerInternal = false;
-
+        GoogleColorPicker.SetColor(_currentColor);
         PopupColorPicker.IsOpen = true;
     }
 
-    private void OnPickerRgbSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnGoogleColorChanged(System.Windows.Media.Color color)
     {
-        if (_isUpdatingColorPickerInternal) return;
-
-        byte r = (byte)(SliderRed?.Value ?? 0);
-        byte g = (byte)(SliderGreen?.Value ?? 0);
-        byte b = (byte)(SliderBlue?.Value ?? 0);
-
-        if (TxtRedVal != null) TxtRedVal.Text = r.ToString();
-        if (TxtGreenVal != null) TxtGreenVal.Text = g.ToString();
-        if (TxtBlueVal != null) TxtBlueVal.Text = b.ToString();
-
-        _isUpdatingColorPickerInternal = true;
-        var color = System.Windows.Media.Color.FromRgb(r, g, b);
-        if (TxtHexColor != null) TxtHexColor.Text = $"#{r:X2}{g:X2}{b:X2}";
-        if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(color);
-        _isUpdatingColorPickerInternal = false;
+        _currentColor = color;
     }
 
-    private void OnPickerHexChanged(object sender, TextChangedEventArgs e)
+    private void OnGoogleColorApplied(System.Windows.Media.Color color)
     {
-        if (_isUpdatingColorPickerInternal || TxtHexColor == null) return;
-
-        var text = TxtHexColor.Text.Trim();
-        if (!text.StartsWith("#")) text = "#" + text;
-
-        try
-        {
-            var parsed = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(text);
-            _isUpdatingColorPickerInternal = true;
-            if (SliderRed != null) SliderRed.Value = parsed.R;
-            if (SliderGreen != null) SliderGreen.Value = parsed.G;
-            if (SliderBlue != null) SliderBlue.Value = parsed.B;
-            if (TxtRedVal != null) TxtRedVal.Text = parsed.R.ToString();
-            if (TxtGreenVal != null) TxtGreenVal.Text = parsed.G.ToString();
-            if (TxtBlueVal != null) TxtBlueVal.Text = parsed.B.ToString();
-            if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(parsed);
-            _isUpdatingColorPickerInternal = false;
-        }
-        catch { }
-    }
-
-    private void OnPickerApplyClicked(object sender, RoutedEventArgs e)
-    {
-        byte r = (byte)(SliderRed?.Value ?? 255);
-        byte g = (byte)(SliderGreen?.Value ?? 122);
-        byte b = (byte)(SliderBlue?.Value ?? 26);
-        _currentColor = System.Windows.Media.Color.FromRgb(r, g, b);
-
+        _currentColor = color;
+        PopupColorPicker.IsOpen = false;
         var swatches = new[] { SwatchOrange, SwatchRed, SwatchYellow, SwatchGreen, SwatchBlue, SwatchPurple, SwatchBlack, SwatchWhite };
         foreach (var s in swatches) if (s != null) s.Tag = null;
+    }
 
+    private void OnGoogleColorPickerClosed()
+    {
         PopupColorPicker.IsOpen = false;
     }
 
@@ -803,6 +954,7 @@ public partial class PdfStudioWindow : Window
             Canvas.SetTop(border, posY);
             PageDrawingCanvas.Children.Add(border);
 
+            PushAction(new AddMarkupAction(PageDrawingCanvas, border, this));
             SelectElement(border);
             SetDirty(true);
             TxtStatus.Text = "Inserted image on PDF page. Drag to move or use 8 handles to resize.";
@@ -817,8 +969,10 @@ public partial class PdfStudioWindow : Window
     {
         if (_selectedElement != null)
         {
-            PageDrawingCanvas.Children.Remove(_selectedElement);
+            var el = _selectedElement;
+            PageDrawingCanvas.Children.Remove(el);
             DeselectCurrentElement();
+            PushAction(new DeleteMarkupAction(PageDrawingCanvas, el, this));
             SetDirty(true);
             TxtStatus.Text = "Deleted selected markup.";
         }
@@ -1060,17 +1214,52 @@ public partial class PdfStudioWindow : Window
 
     private void OnCanvasMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (_isDraggingElement)
+        if (_isDraggingElement && _selectedElement != null)
         {
             _isDraggingElement = false;
+            var finalBounds = GetElementBounds(_selectedElement);
+            if (finalBounds != _elementOriginalBounds)
+            {
+                List<Point>? currentPoints = (_selectedElement is Polyline poly) ? poly.Points.ToList() : null;
+                if (_selectedElement is FrameworkElement fe)
+                {
+                    PushAction(new MoveResizeAction(fe, _elementOriginalBounds, finalBounds, _origPolyPoints, currentPoints, this));
+                }
+            }
         }
 
         if (_isDrawing)
         {
             _isDrawing = false;
-            _activePolyline = null;
-            _activeShapeElement = null;
-            SetDirty(true);
+            if (_activePolyline != null)
+            {
+                if (_activePolyline.Points.Count >= 2)
+                {
+                    PushAction(new AddMarkupAction(PageDrawingCanvas, _activePolyline, this));
+                    SelectElement(_activePolyline);
+                    SetDirty(true);
+                }
+                else
+                {
+                    PageDrawingCanvas.Children.Remove(_activePolyline);
+                }
+                _activePolyline = null;
+            }
+            else if (_activeShapeElement != null)
+            {
+                var b = GetElementBounds(_activeShapeElement);
+                if (b.Width >= 4 || b.Height >= 4)
+                {
+                    PushAction(new AddMarkupAction(PageDrawingCanvas, _activeShapeElement, this));
+                    SelectElement(_activeShapeElement);
+                    SetDirty(true);
+                }
+                else
+                {
+                    PageDrawingCanvas.Children.Remove(_activeShapeElement);
+                }
+                _activeShapeElement = null;
+            }
         }
     }
 
@@ -1104,14 +1293,52 @@ public partial class PdfStudioWindow : Window
                 continue;
             }
 
-            var bounds = GetElementBounds(child);
-            bounds.Inflate(8, 8);
-            if (bounds.Contains(pos))
+            // Accurate stroke segment distance test for freehand drawing
+            if (child is Polyline poly)
             {
-                return child;
+                if (poly.Points.Count < 2) continue;
+                double maxDist = Math.Max(12.0, poly.StrokeThickness / 2.0 + 6.0);
+                for (int p = 0; p < poly.Points.Count - 1; p++)
+                {
+                    if (DistanceToSegment(pos, poly.Points[p], poly.Points[p + 1]) <= maxDist)
+                    {
+                        return child;
+                    }
+                }
+                continue;
+            }
+
+            // Accurate line & arrowhead test for arrows
+            if (child is Canvas arrowCanvas && arrowCanvas.Children.Count >= 2 && arrowCanvas.Children[0] is Line line)
+            {
+                double maxDist = Math.Max(12.0, line.StrokeThickness / 2.0 + 6.0);
+                if (DistanceToSegment(pos, new Point(line.X1, line.Y1), new Point(line.X2, line.Y2)) <= maxDist)
+                {
+                    return child;
+                }
+            }
+
+            if (child is FrameworkElement fe)
+            {
+                var bounds = GetElementBounds(fe);
+                if (bounds.Width <= 4 && bounds.Height <= 4) continue; // skip degenerate/phantom elements
+                bounds.Inflate(6, 6);
+                if (bounds.Contains(pos))
+                {
+                    return child;
+                }
             }
         }
         return null;
+    }
+
+    private static double DistanceToSegment(Point p, Point a, Point b)
+    {
+        double l2 = (b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y);
+        if (l2 < 0.0001) return (p - a).Length;
+        double t = Math.Max(0.0, Math.Min(1.0, ((p.X - a.X) * (b.X - a.X) + (p.Y - a.Y) * (b.Y - a.Y)) / l2));
+        Point proj = new Point(a.X + t * (b.X - a.X), a.Y + t * (b.Y - a.Y));
+        return (p - proj).Length;
     }
 
     private void SelectElement(UIElement? element)
@@ -1229,9 +1456,35 @@ public partial class PdfStudioWindow : Window
         {
             height = Math.Max(16, height + e.VerticalChange);
         }
+        else if (sender == HandleBL)
+        {
+            double nw = Math.Max(16, width - e.HorizontalChange);
+            left += (width - nw);
+            width = nw;
+            height = Math.Max(16, height + e.VerticalChange);
+        }
         else if (sender == HandleMR)
         {
             width = Math.Max(16, width + e.HorizontalChange);
+        }
+        else if (sender == HandleML)
+        {
+            double nw = Math.Max(16, width - e.HorizontalChange);
+            left += (width - nw);
+            width = nw;
+        }
+        else if (sender == HandleTR)
+        {
+            width = Math.Max(16, width + e.HorizontalChange);
+            double nh = Math.Max(16, height - e.VerticalChange);
+            top += (height - nh);
+            height = nh;
+        }
+        else if (sender == HandleTC)
+        {
+            double nh = Math.Max(16, height - e.VerticalChange);
+            top += (height - nh);
+            height = nh;
         }
         else if (sender == HandleTL)
         {
@@ -1243,19 +1496,87 @@ public partial class PdfStudioWindow : Window
             height = nh;
         }
 
-        Canvas.SetLeft(fe, left);
-        Canvas.SetTop(fe, top);
-        fe.Width = width;
-        fe.Height = height;
-
-        if (fe is Border border && border.Child is Image img)
+        if (fe is Polyline poly && b.Width > 0 && b.Height > 0)
         {
-            img.Width = width;
-            img.Height = height;
+            double scaleX = width / b.Width;
+            double scaleY = height / b.Height;
+            var newPoints = new PointCollection();
+            foreach (var pt in poly.Points)
+            {
+                newPoints.Add(new Point(left + (pt.X - b.X) * scaleX, top + (pt.Y - b.Y) * scaleY));
+            }
+            poly.Points = newPoints;
+        }
+        else
+        {
+            Canvas.SetLeft(fe, left);
+            Canvas.SetTop(fe, top);
+            fe.Width = width;
+            fe.Height = height;
+
+            if (fe is Border border && border.Child is Image img)
+            {
+                img.Width = width;
+                img.Height = height;
+            }
         }
 
         UpdateSelectionAdorner();
         SetDirty(true);
+    }
+
+    private void OnWindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        bool isEditingText = Keyboard.FocusedElement is TextBox;
+
+        if (e.Key is Key.Delete or Key.Back)
+        {
+            if (!isEditingText && _selectedElement != null)
+            {
+                OnDeleteMarkupClicked(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+        }
+        else if (e.Key == Key.Escape)
+        {
+            DeselectCurrentElement();
+            if (PopupColorPicker.IsOpen) PopupColorPicker.IsOpen = false;
+            e.Handled = true;
+            return;
+        }
+        else if (e.Key == Key.Z && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            OnUndoClicked(this, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+        else if (e.Key == Key.Y && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            OnRedoClicked(this, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+        else if (e.Key == Key.S && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            OnSaveClicked(this, new RoutedEventArgs());
+            e.Handled = true;
+            return;
+        }
+        else if (!isEditingText && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            switch (e.Key)
+            {
+                case Key.V: OnMarkupToolClicked(BtnToolSelect, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.P: OnMarkupToolClicked(BtnToolPen, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.H: OnMarkupToolClicked(BtnToolHighlight, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.R: OnMarkupToolClicked(BtnToolRectangle, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.O: OnMarkupToolClicked(BtnToolCircle, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.A: OnMarkupToolClicked(BtnToolArrow, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.T: OnMarkupToolClicked(BtnToolText, new RoutedEventArgs()); e.Handled = true; break;
+                case Key.I: OnInsertImageClicked(this, new RoutedEventArgs()); e.Handled = true; break;
+            }
+        }
     }
 
     #endregion

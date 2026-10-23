@@ -160,10 +160,38 @@ public partial class App : Application
         });
     }
 
+    public void ExecuteOperationFromAnywhere(OperationDefinition operation, FileIdentity[]? files)
+    {
+        OnOperationSelected(operation, files ?? Array.Empty<FileIdentity>());
+    }
+
     private async void OnOperationSelected(OperationDefinition operation, FileIdentity[] files)
     {
         if (_serviceProvider == null) return;
         files ??= Array.Empty<FileIdentity>();
+
+        // If no files are pre-selected from Explorer and the operation needs target files, prompt OpenFileDialog
+        if (files.Length == 0 &&
+            operation.Category != OperationCategory.Annotate &&
+            operation.Id != "image-editor" &&
+            operation.Id != "doc-edit-pdf")
+        {
+            var ofd = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = $"Select Target File for {operation.Label}",
+                Filter = "All Supported Files (*.*)|*.*|PDF Documents (*.pdf)|*.pdf|Images (*.png;*.jpg;*.webp)|*.png;*.jpg;*.webp|Archives (*.zip;*.7z;*.tar)|*.zip;*.7z;*.tar",
+                Multiselect = true
+            };
+            if (ofd.ShowDialog() == true && ofd.FileNames.Length > 0)
+            {
+                var identityService = _serviceProvider.GetRequiredService<IFileIdentifier>();
+                files = identityService.IdentifyMultiple(ofd.FileNames);
+            }
+            else
+            {
+                return; // Cancelled
+            }
+        }
 
         bool isImage = files.Length > 0 && files[0].Family == FileFamily.Image;
         bool isPdf = files.Length > 0 && (files[0].Family == FileFamily.Document || files[0].Extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase));

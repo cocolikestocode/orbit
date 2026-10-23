@@ -13,19 +13,29 @@ public partial class PasswordInputDialog : Window
     public PasswordInputDialog(string title, string message)
     {
         InitializeComponent();
+        Topmost = true;
         TxtTitle.Text = title;
         TxtSubtitle.Text = message;
-        Loaded += (s, e) => PbPassword.Focus();
+        Loaded += (s, e) =>
+        {
+            Activate();
+            Focus();
+            PbPassword.Focus();
+        };
     }
 
     public static (bool Confirmed, string Password) Prompt(string title, string message, Window? owner = null)
     {
-        var dialog = new PasswordInputDialog(title, message);
+        var dialog = new PasswordInputDialog(title, message)
+        {
+            Topmost = true
+        };
         if (owner != null && owner.IsVisible)
         {
             dialog.Owner = owner;
         }
 
+        dialog.Activate();
         bool? result = dialog.ShowDialog();
         return (dialog.Confirmed, dialog.Password);
     }

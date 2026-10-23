@@ -91,7 +91,6 @@ public partial class ImageAnnotationWindow : Window
     public ImageAnnotationWindow()
     {
         InitializeComponent();
-        KeyDown += OnWindowKeyDown;
         Closing += OnWindowClosing;
         UpdateToolSelection(AnnotationTool.Pen);
         UpdateStrokePreview();
@@ -461,80 +460,29 @@ public partial class ImageAnnotationWindow : Window
         }
     }
 
-    private bool _isUpdatingColorPickerInternal;
-
     private void OnCustomColorButtonClicked(object sender, RoutedEventArgs e)
     {
-        _isUpdatingColorPickerInternal = true;
-        SliderRed.Value = _currentColor.R;
-        SliderGreen.Value = _currentColor.G;
-        SliderBlue.Value = _currentColor.B;
-        TxtRedVal.Text = _currentColor.R.ToString();
-        TxtGreenVal.Text = _currentColor.G.ToString();
-        TxtBlueVal.Text = _currentColor.B.ToString();
-        TxtHexColor.Text = $"#{_currentColor.R:X2}{_currentColor.G:X2}{_currentColor.B:X2}";
-        PickerPreviewBox.Background = new SolidColorBrush(_currentColor);
-        _isUpdatingColorPickerInternal = false;
-
+        GoogleColorPicker.SetColor(_currentColor);
         PopupColorPicker.IsOpen = true;
     }
 
-    private void OnPickerRgbSliderChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void OnGoogleColorChanged(System.Windows.Media.Color color)
     {
-        if (_isUpdatingColorPickerInternal) return;
-
-        byte r = (byte)(SliderRed?.Value ?? 0);
-        byte g = (byte)(SliderGreen?.Value ?? 0);
-        byte b = (byte)(SliderBlue?.Value ?? 0);
-
-        if (TxtRedVal != null) TxtRedVal.Text = r.ToString();
-        if (TxtGreenVal != null) TxtGreenVal.Text = g.ToString();
-        if (TxtBlueVal != null) TxtBlueVal.Text = b.ToString();
-
-        _isUpdatingColorPickerInternal = true;
-        var color = System.Windows.Media.Color.FromRgb(r, g, b);
-        if (TxtHexColor != null) TxtHexColor.Text = $"#{r:X2}{g:X2}{b:X2}";
-        if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(color);
-        _isUpdatingColorPickerInternal = false;
-    }
-
-    private void OnPickerHexChanged(object sender, TextChangedEventArgs e)
-    {
-        if (_isUpdatingColorPickerInternal || TxtHexColor == null) return;
-
-        var text = TxtHexColor.Text.Trim();
-        if (!text.StartsWith("#")) text = "#" + text;
-
-        try
-        {
-            var parsed = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(text);
-            _isUpdatingColorPickerInternal = true;
-            if (SliderRed != null) SliderRed.Value = parsed.R;
-            if (SliderGreen != null) SliderGreen.Value = parsed.G;
-            if (SliderBlue != null) SliderBlue.Value = parsed.B;
-            if (TxtRedVal != null) TxtRedVal.Text = parsed.R.ToString();
-            if (TxtGreenVal != null) TxtGreenVal.Text = parsed.G.ToString();
-            if (TxtBlueVal != null) TxtBlueVal.Text = parsed.B.ToString();
-            if (PickerPreviewBox != null) PickerPreviewBox.Background = new SolidColorBrush(parsed);
-            _isUpdatingColorPickerInternal = false;
-        }
-        catch { }
-    }
-
-    private void OnPickerApplyClicked(object sender, RoutedEventArgs e)
-    {
-        byte r = (byte)(SliderRed?.Value ?? 255);
-        byte g = (byte)(SliderGreen?.Value ?? 122);
-        byte b = (byte)(SliderBlue?.Value ?? 26);
-        _currentColor = System.Windows.Media.Color.FromRgb(r, g, b);
-
-        var swatches = new[] { SwatchRed, SwatchCoral, SwatchOrange, SwatchAmber, SwatchLime, SwatchGreen, SwatchCyan, SwatchBlue, SwatchPurple, SwatchPink, SwatchWhite, SwatchBlack };
-        foreach (var s in swatches)
-        {
-            if (s != null) s.Tag = null;
-        }
-
+        _currentColor = color;
         UpdateStrokePreview();
+    }
+
+    private void OnGoogleColorApplied(System.Windows.Media.Color color)
+    {
+        _currentColor = color;
+        PopupColorPicker.IsOpen = false;
+        var swatches = new[] { SwatchRed, SwatchCoral, SwatchOrange, SwatchAmber, SwatchLime, SwatchGreen, SwatchCyan, SwatchBlue, SwatchPurple, SwatchPink, SwatchWhite, SwatchBlack };
+        foreach (var s in swatches) if (s != null) s.Tag = null;
+        UpdateStrokePreview();
+    }
+
+    private void OnGoogleColorPickerClosed()
+    {
         PopupColorPicker.IsOpen = false;
     }
 
@@ -1127,18 +1075,50 @@ public partial class ImageAnnotationWindow : Window
             var child = DrawingCanvas.Children[i];
             if (child == BaseImageElement || child == _activeWatermarkElement) continue;
 
+            if (child is Polyline poly)
+            {
+                if (poly.Points.Count < 2) continue;
+                double maxDist = Math.Max(12.0, poly.StrokeThickness / 2.0 + 6.0);
+                for (int p = 0; p < poly.Points.Count - 1; p++)
+                {
+                    if (DistanceToSegment(pos, poly.Points[p], poly.Points[p + 1]) <= maxDist)
+                    {
+                        return poly;
+                    }
+                }
+                continue;
+            }
+
+            if (child is Canvas arrowCanvas && arrowCanvas.Children.Count >= 2 && arrowCanvas.Children[0] is Line line)
+            {
+                double maxDist = Math.Max(12.0, line.StrokeThickness / 2.0 + 6.0);
+                if (DistanceToSegment(pos, new Point(line.X1, line.Y1), new Point(line.X2, line.Y2)) <= maxDist)
+                {
+                    return arrowCanvas;
+                }
+            }
+
             if (child is FrameworkElement fe)
             {
                 var bounds = GetElementBounds(fe);
-                var inflated = bounds;
-                inflated.Inflate(8, 8);
-                if (inflated.Contains(pos))
+                if (bounds.Width <= 4 && bounds.Height <= 4) continue;
+                bounds.Inflate(6, 6);
+                if (bounds.Contains(pos))
                 {
                     return fe;
                 }
             }
         }
         return null;
+    }
+
+    private static double DistanceToSegment(Point p, Point a, Point b)
+    {
+        double l2 = (b.X - a.X) * (b.X - a.X) + (b.Y - a.Y) * (b.Y - a.Y);
+        if (l2 < 0.0001) return (p - a).Length;
+        double t = Math.Max(0.0, Math.Min(1.0, ((p.X - a.X) * (b.X - a.X) + (p.Y - a.Y) * (b.Y - a.Y)) / l2));
+        Point proj = new Point(a.X + t * (b.X - a.X), a.Y + t * (b.Y - a.Y));
+        return (p - proj).Length;
     }
 
     private void OnSelectionBorderMouseDown(object sender, MouseButtonEventArgs e)
@@ -2460,7 +2440,7 @@ public partial class ImageAnnotationWindow : Window
         }
     }
 
-    private void OnWindowKeyDown(object sender, KeyEventArgs e)
+    private void OnWindowPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (CropLayerCanvas != null && CropLayerCanvas.Visibility == Visibility.Visible)
         {
@@ -2476,6 +2456,14 @@ public partial class ImageAnnotationWindow : Window
                 e.Handled = true;
                 return;
             }
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            SelectElement(null);
+            if (PopupColorPicker.IsOpen) PopupColorPicker.IsOpen = false;
+            e.Handled = true;
+            return;
         }
 
         if (e.Key == Key.Z && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
