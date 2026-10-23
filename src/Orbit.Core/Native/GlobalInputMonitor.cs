@@ -16,7 +16,7 @@ public class GlobalInputMonitor : IDisposable
     private bool _isMouseDown;
     private Win32.POINT _mouseDownOrigin;
     private bool _isDragging;
-    private bool _isShiftHeld;
+    private bool _isModifierHeld;
     private bool _isOrbitActive;
 
     public event Action<int, int>? OrbitTriggered;
@@ -28,6 +28,7 @@ public class GlobalInputMonitor : IDisposable
 
     public int DragDistanceThreshold { get; set; } = 12;
     public bool IsPaused { get; set; }
+    public string ActivationModifier { get; set; } = "Shift";
 
     public GlobalInputMonitor()
     {
@@ -106,9 +107,9 @@ public class GlobalInputMonitor : IDisposable
 
                         if (_isDragging)
                         {
-                            CheckShiftState();
+                            CheckModifierState();
 
-                            if (_isShiftHeld && !_isOrbitActive)
+                            if (_isModifierHeld && !_isOrbitActive)
                             {
                                 _isOrbitActive = true;
                                 OrbitTriggered?.Invoke(hookStruct.pt.x, hookStruct.pt.y);
@@ -146,11 +147,9 @@ public class GlobalInputMonitor : IDisposable
 
             if (msg == Win32.WM_KEYDOWN || msg == Win32.WM_SYSKEYDOWN)
             {
-                if (hookStruct.vkCode == Win32.VK_SHIFT ||
-                    hookStruct.vkCode == Win32.VK_LSHIFT ||
-                    hookStruct.vkCode == Win32.VK_RSHIFT)
+                if (IsActivationKey(hookStruct.vkCode))
                 {
-                    _isShiftHeld = true;
+                    _isModifierHeld = true;
 
                     if (_isDragging && !_isOrbitActive)
                     {
@@ -171,7 +170,7 @@ public class GlobalInputMonitor : IDisposable
                 }
                 else if (_isOrbitActive)
                 {
-                    // Check category shortcut keys (C, E, A, O, P, X, S, I)
+                    // Check category shortcut keys
                     char keyChar = (char)hookStruct.vkCode;
                     if (char.IsLetter(keyChar))
                     {
@@ -181,11 +180,9 @@ public class GlobalInputMonitor : IDisposable
             }
             else if (msg == Win32.WM_KEYUP || msg == Win32.WM_SYSKEYUP)
             {
-                if (hookStruct.vkCode == Win32.VK_SHIFT ||
-                    hookStruct.vkCode == Win32.VK_LSHIFT ||
-                    hookStruct.vkCode == Win32.VK_RSHIFT)
+                if (IsActivationKey(hookStruct.vkCode))
                 {
-                    _isShiftHeld = false;
+                    _isModifierHeld = false;
 
                     if (_isOrbitActive)
                     {
@@ -199,10 +196,27 @@ public class GlobalInputMonitor : IDisposable
         return Win32.CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
     }
 
-    private void CheckShiftState()
+    private bool IsActivationKey(uint vkCode)
     {
-        var shiftState = Win32.GetAsyncKeyState(Win32.VK_SHIFT);
-        _isShiftHeld = (shiftState & 0x8000) != 0;
+        return ActivationModifier.ToLowerInvariant() switch
+        {
+            "ctrl" => vkCode is (uint)Win32.VK_CONTROL or 0xA2 or 0xA3,
+            "alt" => vkCode is (uint)Win32.VK_MENU or 0xA4 or 0xA5,
+            _ => vkCode is (uint)Win32.VK_SHIFT or (uint)Win32.VK_LSHIFT or (uint)Win32.VK_RSHIFT
+        };
+    }
+
+    private void CheckModifierState()
+    {
+        int vKey = ActivationModifier.ToLowerInvariant() switch
+        {
+            "ctrl" => Win32.VK_CONTROL,
+            "alt" => Win32.VK_MENU,
+            _ => Win32.VK_SHIFT
+        };
+
+        var state = Win32.GetAsyncKeyState(vKey);
+        _isModifierHeld = (state & 0x8000) != 0;
     }
 
     public void Dispose()

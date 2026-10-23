@@ -15,6 +15,7 @@ public partial class OverlayWindow : Window
     private readonly IFileIdentifier _fileIdentifier;
     private readonly ICapabilityResolver _capabilityResolver;
     private FileIdentity[] _currentFiles = Array.Empty<FileIdentity>();
+    private bool _playSounds = false;
 
     public event Action<OperationDefinition, FileIdentity[]>? OperationSelected;
 
@@ -69,6 +70,20 @@ public partial class OverlayWindow : Window
         return new Point(screenX / scaleX, screenY / scaleY);
     }
 
+    public void ApplySettings(OrbitSettings settings)
+    {
+        if (settings == null) return;
+        _playSounds = settings.PlaySounds;
+        RadialMenu.SetCategoryShortcuts(settings);
+
+        double scale = Math.Clamp(settings.MenuScale, 0.6, 1.5);
+        if (MenuScaleTransform != null)
+        {
+            MenuScaleTransform.ScaleX = scale;
+            MenuScaleTransform.ScaleY = scale;
+        }
+    }
+
     public void ShowAt(int screenX, int screenY, string[]? files = null)
     {
         var dipPt = ScreenToDip(screenX, screenY);
@@ -112,6 +127,11 @@ public partial class OverlayWindow : Window
             SetFiles(files);
         }
 
+        if (_playSounds)
+        {
+            try { System.Media.SystemSounds.Asterisk.Play(); } catch { }
+        }
+
         Show();
     }
 
@@ -127,8 +147,9 @@ public partial class OverlayWindow : Window
     public void UpdateCursorPosition(int screenX, int screenY)
     {
         var dipPt = ScreenToDip(screenX, screenY);
-        double localX = dipPt.X - Left;
-        double localY = dipPt.Y - Top;
+        double scale = (MenuScaleTransform != null && MenuScaleTransform.ScaleX > 0) ? MenuScaleTransform.ScaleX : 1.0;
+        double localX = (dipPt.X - Left - (Width / 2.0)) / scale + (Width / 2.0);
+        double localY = (dipPt.Y - Top - (Height / 2.0)) / scale + (Height / 2.0);
         RadialMenu.UpdateHoverState(localX, localY);
     }
 

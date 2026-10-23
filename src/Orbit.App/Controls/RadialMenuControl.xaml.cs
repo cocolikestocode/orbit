@@ -323,20 +323,55 @@ public partial class RadialMenuControl : UserControl
         }
     }
 
+    private readonly Dictionary<char, OperationCategory> _customShortcuts = new();
+
+    public void SetCategoryShortcuts(OrbitSettings settings)
+    {
+        _customShortcuts.Clear();
+        if (settings == null) return;
+
+        void Map(string? keyStr, OperationCategory cat)
+        {
+            if (!string.IsNullOrWhiteSpace(keyStr))
+            {
+                char ch = char.ToUpperInvariant(keyStr.Trim()[0]);
+                _customShortcuts[ch] = cat;
+            }
+        }
+
+        Map(settings.ShortcutConvert, OperationCategory.Convert);
+        Map(settings.ShortcutEdit, OperationCategory.Edit);
+        Map(settings.ShortcutAnnotate, OperationCategory.Annotate);
+        Map(settings.ShortcutOptimize, OperationCategory.Optimize);
+        Map(settings.ShortcutOrganize, OperationCategory.Organize);
+        Map(settings.ShortcutExtract, OperationCategory.Extract);
+        Map(settings.ShortcutAnalyze, OperationCategory.Analyze);
+    }
+
     public void TriggerCategoryShortcut(char key)
     {
-        var category = key switch
+        char upper = char.ToUpperInvariant(key);
+        OperationCategory? category = null;
+
+        if (_customShortcuts.TryGetValue(upper, out var customCat))
         {
-            'C' => OperationCategory.Convert,
-            'E' => OperationCategory.Edit,
-            'A' => OperationCategory.Annotate,
-            'O' => OperationCategory.Organize,
-            'P' => OperationCategory.Optimize,
-            'X' => OperationCategory.Extract,
-            'S' => OperationCategory.Secure,
-            'I' => OperationCategory.Analyze,
-            _ => (OperationCategory?)null
-        };
+            category = customCat;
+        }
+        else
+        {
+            category = upper switch
+            {
+                'C' => OperationCategory.Convert,
+                'E' => OperationCategory.Edit,
+                'A' => OperationCategory.Annotate,
+                'O' => OperationCategory.Organize,
+                'P' => OperationCategory.Optimize,
+                'X' => OperationCategory.Extract,
+                'S' => OperationCategory.Secure,
+                'I' => OperationCategory.Analyze,
+                _ => null
+            };
+        }
 
         if (category.HasValue && _capabilities != null && _capabilities.AvailableCategories.Contains(category.Value))
         {

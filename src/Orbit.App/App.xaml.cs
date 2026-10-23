@@ -67,6 +67,22 @@ public partial class App : Application
             System.Diagnostics.Trace.WriteLine($"[Orbit] Could not start low-level hooks: {ex.Message}");
         }
 
+        // Apply initial settings & themes
+        var settingsService = _serviceProvider.GetRequiredService<ISettingsService>();
+        Orbit.App.Services.ThemeManager.ApplyTheme(settingsService.CurrentSettings);
+        _inputMonitor.ActivationModifier = settingsService.CurrentSettings.ActivationModifier;
+        _overlayWindow.ApplySettings(settingsService.CurrentSettings);
+
+        settingsService.SettingsChanged += (newSettings) =>
+        {
+            Dispatcher.Invoke(() =>
+            {
+                Orbit.App.Services.ThemeManager.ApplyTheme(newSettings);
+                _inputMonitor.ActivationModifier = newSettings.ActivationModifier;
+                _overlayWindow.ApplySettings(newSettings);
+            });
+        };
+
         // Initialize Tray Icon
         _trayIconManager = _serviceProvider.GetRequiredService<TrayIconManager>();
 

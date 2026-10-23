@@ -5,7 +5,7 @@
         Height="720" Width="1100"
         MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource OrbitBackgroundBrush}">
+        Background="{DynamicResource OrbitBackgroundBrush}">
 
     <Window.Resources>
         <!-- Nav Item Button Style -->
@@ -281,24 +281,24 @@
 
                     <!-- TAB 3: APPEARANCE -->
                     <StackPanel x:Name="PanelAppearance" Visibility="Collapsed">
-                        <TextBlock Text="Appearance &amp; Theme" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
-                        <TextBlock Text="Customize canvas color palettes, theme mode, and radial menu styling." Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
+                        <TextBlock Text="Appearance &amp; Theme" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Customize canvas color palettes, theme mode, and radial menu styling." Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
 
                         <Border Style="{StaticResource SettingCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="THEME MODE" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
-                                <ComboBox x:Name="CmbTheme" Width="220" Height="32" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,16">
+                                <TextBlock Text="THEME MODE" Foreground="{DynamicResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <ComboBox x:Name="CmbTheme" Width="240" Height="34" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,18" SelectionChanged="OnThemeSelectionChanged">
                                     <ComboBoxItem Content="Dark Modern (#181920)" IsSelected="True"/>
                                     <ComboBoxItem Content="Deep OLED (#000000)"/>
                                     <ComboBoxItem Content="Midnight Slate (#0F172A)"/>
                                 </ComboBox>
 
-                                <TextBlock Text="ACCENT COLOR" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <TextBlock Text="ACCENT COLOR" Foreground="{DynamicResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,10"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                    <Border Width="30" Height="30" CornerRadius="15" Background="#FF7A1A" BorderBrush="White" BorderThickness="2" Margin="0,0,10,0" Cursor="Hand"/>
-                                    <Border Width="30" Height="30" CornerRadius="15" Background="#6366F1" Margin="0,0,10,0" Cursor="Hand"/>
-                                    <Border Width="30" Height="30" CornerRadius="15" Background="#06B6D4" Margin="0,0,10,0" Cursor="Hand"/>
-                                    <Border Width="30" Height="30" CornerRadius="15" Background="#10B981" Margin="0,0,10,0" Cursor="Hand"/>
+                                    <Border x:Name="ColorDotOrange" Tag="#FF7A1A" Width="32" Height="32" CornerRadius="16" Background="#FF7A1A" BorderBrush="White" BorderThickness="2" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnColorDotClicked"/>
+                                    <Border x:Name="ColorDotIndigo" Tag="#6366F1" Width="32" Height="32" CornerRadius="16" Background="#6366F1" BorderBrush="Transparent" BorderThickness="2" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnColorDotClicked"/>
+                                    <Border x:Name="ColorDotCyan" Tag="#06B6D4" Width="32" Height="32" CornerRadius="16" Background="#06B6D4" BorderBrush="Transparent" BorderThickness="2" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnColorDotClicked"/>
+                                    <Border x:Name="ColorDotEmerald" Tag="#10B981" Width="32" Height="32" CornerRadius="16" Background="#10B981" BorderBrush="Transparent" BorderThickness="2" Margin="0,0,12,0" Cursor="Hand" MouseLeftButtonDown="OnColorDotClicked"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -306,51 +306,65 @@
 
                     <!-- TAB 4: FILE OPERATIONS -->
                     <StackPanel x:Name="PanelFileOps" Visibility="Collapsed">
-                        <TextBlock Text="File Operations" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
-                        <TextBlock Text="Configure output file collision rules and default directories." Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
+                        <TextBlock Text="File Operations" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Configure output file collision rules and default directories." Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
 
                         <Border Style="{StaticResource SettingCardStyle}">
                             <StackPanel>
-                                <CheckBox x:Name="ChkPreserveOriginals" Content="Preserve original files by default" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
-                                <TextBlock Text="OUTPUT DIRECTORY STRATEGY" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,4,0,8"/>
-                                <ComboBox x:Name="CmbDefaultOutputDir" Width="260" Height="32" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}">
+                                <CheckBox x:Name="ChkPreserveOriginals" Content="Preserve original files by default" IsChecked="True" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
+                                <TextBlock Text="OUTPUT DIRECTORY STRATEGY" Foreground="{DynamicResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,4,0,8"/>
+                                <ComboBox x:Name="CmbDefaultOutputDir" Width="280" Height="34" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,12" SelectionChanged="OnDefaultOutputDirChanged">
                                     <ComboBoxItem Content="Same folder as source file" IsSelected="True"/>
                                     <ComboBoxItem Content="Subfolder named 'Orbit_Output'"/>
                                     <ComboBoxItem Content="Custom global output directory..."/>
                                 </ComboBox>
+
+                                <!-- Custom Global Directory Input -->
+                                <StackPanel x:Name="PnlCustomDir" Visibility="Collapsed" Margin="0,4,0,0">
+                                    <TextBlock Text="CUSTOM DESTINATION PATH" Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="TxtCustomOutputDir" Height="32" Style="{StaticResource OrbitTextBoxStyle}" Margin="0,0,8,0"/>
+                                        <Button Grid.Column="1" Content="📁 Browse..." Style="{StaticResource OrbitSecondaryButtonStyle}" Padding="12,6" Click="OnBrowseCustomDirClicked"/>
+                                    </Grid>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- TAB 5: INTEGRATIONS -->
                     <StackPanel x:Name="PanelIntegrations" Visibility="Collapsed">
-                        <TextBlock Text="Integrations" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
-                        <TextBlock Text="Hook into Windows File Explorer, Total Commander, and clipboard." Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
+                        <TextBlock Text="Integrations" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Hook into Windows File Explorer, Desktop gestures, and clipboard." Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
 
                         <Border Style="{StaticResource SettingCardStyle}">
                             <StackPanel>
-                                <CheckBox Content="Add 'Open with Orbit' to Windows File Explorer context menu" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
-                                <CheckBox Content="Enable Drag &amp; Drop interception from third-party file managers" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
-                                <CheckBox Content="Auto-detect dragged files from web browser download bar" IsChecked="True" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13"/>
+                                <CheckBox x:Name="ChkExplorerIntegration" Content="Windows File Explorer &amp; Desktop Global Drag Detection" IsChecked="True" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="ChkInterception" Content="Multi-Monitor Boundary Protection &amp; Clamping" IsChecked="True" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13" Margin="0,0,0,14"/>
+                                <CheckBox x:Name="ChkBrowserInterception" Content="Auto-detect dragged files from web browsers &amp; third-party apps" IsChecked="True" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- TAB 6: ADVANCED -->
                     <StackPanel x:Name="PanelAdvanced" Visibility="Collapsed">
-                        <TextBlock Text="Advanced Configuration" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
-                        <TextBlock Text="Low-level hook parameters, worker threads, and diagnostics." Foreground="{StaticResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
+                        <TextBlock Text="Advanced Configuration" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Low-level hook parameters, worker threads, and diagnostics." Foreground="{DynamicResource OrbitTextSecondaryBrush}" FontSize="12" Margin="0,4,0,20"/>
 
                         <Border Style="{StaticResource SettingCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="MAXIMUM WORKER THREADS" Foreground="{StaticResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
-                                <ComboBox Width="160" Height="32" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,16">
+                                <TextBlock Text="MAXIMUM WORKER THREADS" Foreground="{DynamicResource OrbitAccentBrush}" FontSize="11" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <ComboBox x:Name="CmbWorkerThreads" Width="180" Height="34" HorizontalAlignment="Left" Style="{StaticResource OrbitComboBoxStyle}" Margin="0,0,0,16">
                                     <ComboBoxItem Content="Auto (4 Threads)" IsSelected="True"/>
                                     <ComboBoxItem Content="2 Threads"/>
                                     <ComboBoxItem Content="4 Threads"/>
                                     <ComboBoxItem Content="8 Threads"/>
+                                    <ComboBoxItem Content="16 Threads"/>
                                 </ComboBox>
-                                <CheckBox Content="Enable verbose diagnostic debug logging to %APPDATA%/Orbit/logs" Foreground="{StaticResource OrbitTextPrimaryBrush}" FontSize="13"/>
+                                <CheckBox x:Name="ChkVerboseLogging" Content="Enable verbose diagnostic debug logging to %APPDATA%/Orbit/logs" Foreground="{DynamicResource OrbitTextPrimaryBrush}" FontSize="13"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

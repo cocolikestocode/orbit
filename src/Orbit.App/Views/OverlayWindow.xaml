@@ -12,6 +12,11 @@
         WindowStartupLocation="Manual"
         AllowDrop="True">
     <Grid Width="540" Height="540" Background="#01000000">
-        <controls:RadialMenuControl x:Name="RadialMenu" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <Grid x:Name="MenuContainer" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+            <Grid.RenderTransform>
+                <ScaleTransform x:Name="MenuScaleTransform" ScaleX="1.0" ScaleY="1.0"/>
+            </Grid.RenderTransform>
+            <controls:RadialMenuControl x:Name="RadialMenu" />
+        </Grid>
     </Grid>
 </Window>

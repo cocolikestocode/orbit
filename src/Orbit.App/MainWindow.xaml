@@ -5,7 +5,7 @@
         Height="780" Width="1160"
         MinHeight="620" MinWidth="940"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource OrbitBackgroundBrush}">
+        Background="{DynamicResource OrbitBackgroundBrush}">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource OrbitSurfaceBrush}" CornerRadius="12" Padding="20,14" BorderBrush="{StaticResource OrbitBorderBrush}" BorderThickness="1">
+        <Border Grid.Row="0" Background="{DynamicResource OrbitSurfaceBrush}" CornerRadius="12" Padding="20,14" BorderBrush="{DynamicResource OrbitBorderBrush}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
