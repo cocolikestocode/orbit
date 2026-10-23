@@ -114,7 +114,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                         }
                     }
 
-                    var csvPath = Path.Combine(dir, $"{baseName}.csv");
+                    var csvPath = GetUniqueOutputPath(dir, $"{baseName}.csv");
                     await File.WriteAllTextAsync(csvPath, sb.ToString(), cancellationToken);
                     outputFiles.Add(csvPath);
                 }
@@ -138,7 +138,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                             rows.Add(dict);
                         }
                         var json = JsonSerializer.Serialize(rows, new JsonSerializerOptions { WriteIndented = true });
-                        var jsonPath = Path.Combine(dir, $"{baseName}.json");
+                        var jsonPath = GetUniqueOutputPath(dir, $"{baseName}.json");
                         await File.WriteAllTextAsync(jsonPath, json, cancellationToken);
                         outputFiles.Add(jsonPath);
                     }
@@ -150,7 +150,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     using var doc = JsonDocument.Parse(text);
                     var sb = new StringBuilder();
                     WriteJsonElementToYaml(doc.RootElement, sb, 0);
-                    var yamlPath = Path.Combine(dir, $"{baseName}.yaml");
+                    var yamlPath = GetUniqueOutputPath(dir, $"{baseName}.yaml");
                     await File.WriteAllTextAsync(yamlPath, sb.ToString(), cancellationToken);
                     outputFiles.Add(yamlPath);
                 }
@@ -171,7 +171,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                         }
                     }
                     var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
-                    var jsonPath = Path.Combine(dir, $"{baseName}.json");
+                    var jsonPath = GetUniqueOutputPath(dir, $"{baseName}.json");
                     await File.WriteAllTextAsync(jsonPath, json, cancellationToken);
                     outputFiles.Add(jsonPath);
                 }
@@ -182,7 +182,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     var xdoc = XDocument.Parse(xml);
                     var dict = ConvertXElementToDict(xdoc.Root);
                     var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
-                    var jsonPath = Path.Combine(dir, $"{baseName}.json");
+                    var jsonPath = GetUniqueOutputPath(dir, $"{baseName}.json");
                     await File.WriteAllTextAsync(jsonPath, json, cancellationToken);
                     outputFiles.Add(jsonPath);
                 }
@@ -191,7 +191,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                 {
                     var xml = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
                     var xdoc = XDocument.Parse(xml);
-                    var outPath = Path.Combine(dir, $"{baseName}_formatted.xml");
+                    var outPath = GetUniqueOutputPath(dir, $"{baseName}_formatted.xml");
                     await File.WriteAllTextAsync(outPath, xdoc.ToString(), cancellationToken);
                     outputFiles.Add(outPath);
                 }
@@ -201,7 +201,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     using var stream = File.OpenRead(file.FilePath);
                     var hashBytes = await SHA256.HashDataAsync(stream, cancellationToken);
                     var hashStr = Convert.ToHexString(hashBytes).ToLowerInvariant();
-                    var hashFile = Path.Combine(dir, $"{file.FileName}.sha256");
+                    var hashFile = GetUniqueOutputPath(dir, $"{file.FileName}.sha256");
                     await File.WriteAllTextAsync(hashFile, $"{hashStr} *{file.FileName}\n", cancellationToken);
                     outputFiles.Add(hashFile);
                 }
@@ -210,7 +210,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     using var stream = File.OpenRead(file.FilePath);
                     var hashBytes = await MD5.HashDataAsync(stream, cancellationToken);
                     var hashStr = Convert.ToHexString(hashBytes).ToLowerInvariant();
-                    var hashFile = Path.Combine(dir, $"{file.FileName}.md5");
+                    var hashFile = GetUniqueOutputPath(dir, $"{file.FileName}.md5");
                     await File.WriteAllTextAsync(hashFile, $"{hashStr} *{file.FileName}\n", cancellationToken);
                     outputFiles.Add(hashFile);
                 }
@@ -222,7 +222,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                         var content = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
                         using var doc = JsonDocument.Parse(content);
                         var formatted = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
-                        var outPath = Path.Combine(dir, $"{baseName}_formatted.json");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_formatted.json");
                         await File.WriteAllTextAsync(outPath, formatted, cancellationToken);
                         outputFiles.Add(outPath);
                     }
@@ -234,7 +234,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                         {
                             cleaned.AppendLine(line.TrimEnd());
                         }
-                        var outPath = Path.Combine(dir, $"{baseName}_formatted{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_formatted{file.Extension}");
                         await File.WriteAllTextAsync(outPath, cleaned.ToString(), cancellationToken);
                         outputFiles.Add(outPath);
                     }
@@ -247,7 +247,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                         var content = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
                         using var doc = JsonDocument.Parse(content);
                         var minified = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = false });
-                        var outPath = Path.Combine(dir, $"{baseName}_minified.json");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_minified.json");
                         await File.WriteAllTextAsync(outPath, minified, cancellationToken);
                         outputFiles.Add(outPath);
                     }
@@ -255,7 +255,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     {
                         var content = await File.ReadAllTextAsync(file.FilePath, cancellationToken);
                         var minified = System.Text.RegularExpressions.Regex.Replace(content, @"\s+", " ").Trim();
-                        var outPath = Path.Combine(dir, $"{baseName}_minified{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_minified{file.Extension}");
                         await File.WriteAllTextAsync(outPath, minified, cancellationToken);
                         outputFiles.Add(outPath);
                     }
@@ -266,7 +266,7 @@ public class TextDataProcessingEngine : IProcessingEngine
                     var lines = await File.ReadAllLinesAsync(file.FilePath, cancellationToken);
                     var sortedLines = lines.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                     Array.Sort(sortedLines, StringComparer.OrdinalIgnoreCase);
-                    var sortedPath = Path.Combine(dir, $"{baseName}_sorted{file.Extension}");
+                    var sortedPath = GetUniqueOutputPath(dir, $"{baseName}_sorted{file.Extension}");
                     await File.WriteAllLinesAsync(sortedPath, sortedLines, cancellationToken);
                     outputFiles.Add(sortedPath);
                 }
@@ -348,6 +348,22 @@ public class TextDataProcessingEngine : IProcessingEngine
                 Duration = stopwatch.Elapsed
             };
         }
+    }
+
+    public static string GetUniqueOutputPath(string directory, string fileName)
+    {
+        var fullPath = Path.Combine(directory, fileName);
+        if (!File.Exists(fullPath)) return fullPath;
+
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        int counter = 1;
+        while (File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(directory, $"{nameWithoutExt}_{counter}{ext}");
+            counter++;
+        }
+        return fullPath;
     }
 
     private static string EscapeCsv(string str)

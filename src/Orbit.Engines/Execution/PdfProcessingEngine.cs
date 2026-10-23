@@ -487,6 +487,22 @@ public class PdfProcessingEngine : IProcessingEngine
         return sb.ToString();
     }
 
+    public static string GetUniqueOutputPath(string directory, string fileName)
+    {
+        var fullPath = Path.Combine(directory, fileName);
+        if (!File.Exists(fullPath)) return fullPath;
+
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        int counter = 1;
+        while (File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(directory, $"{nameWithoutExt}_{counter}{ext}");
+            counter++;
+        }
+        return fullPath;
+    }
+
     public static async Task<string> MergePdfsAsync(
         FileIdentity[] files,
         string? outputDirectory,
@@ -499,7 +515,7 @@ public class PdfProcessingEngine : IProcessingEngine
             ? $"Merged_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
             : $"{Path.GetFileNameWithoutExtension(files[0].FilePath)}_merged.pdf";
 
-        var outPath = Path.Combine(targetDir, outFileName);
+        var outPath = GetUniqueOutputPath(targetDir, outFileName);
 
         using var outDoc = new PdfDocument();
         foreach (var file in files)
@@ -546,7 +562,7 @@ public class PdfProcessingEngine : IProcessingEngine
             cancellationToken.ThrowIfCancellationRequested();
             using var singleDoc = new PdfDocument();
             singleDoc.AddPage(inDoc.Pages[i]);
-            var outPath = Path.Combine(targetDir, $"{baseName}_page_{i + 1}.pdf");
+            var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_page_{i + 1}.pdf");
             singleDoc.Save(outPath);
             results.Add(outPath);
         }
@@ -563,7 +579,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outPath = Path.Combine(targetDir, $"{baseName}_rotated.pdf");
+        var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_rotated.pdf");
 
         using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
         for (int i = 0; i < inDoc.PageCount; i++)
@@ -582,7 +598,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outPath = Path.Combine(targetDir, $"{baseName}_compressed.pdf");
+        var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_compressed.pdf");
 
         using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
         inDoc.Options.CompressContentStreams = true;
@@ -599,7 +615,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outPath = Path.Combine(targetDir, $"{baseName}_protected.pdf");
+        var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_protected.pdf");
 
         using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
         inDoc.SecuritySettings.UserPassword = password;
@@ -617,7 +633,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outPath = Path.Combine(targetDir, $"{baseName}_unlocked.pdf");
+        var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_unlocked.pdf");
 
         using var inDoc = string.IsNullOrEmpty(password)
             ? PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify)
@@ -646,7 +662,7 @@ public class PdfProcessingEngine : IProcessingEngine
             for (int i = 0; i < pageCount; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var outPath = Path.Combine(targetDir, $"{baseName}_page_{i + 1}.png");
+                var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_page_{i + 1}.png");
                 PDFtoImage.Conversion.SavePng(outPath, pdfBytes, page: i, options: new PDFtoImage.RenderOptions(300));
                 results.Add(outPath);
             }
@@ -664,7 +680,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outPath = Path.Combine(targetDir, $"{baseName}_signed.pdf");
+        var outPath = GetUniqueOutputPath(targetDir, $"{baseName}_signed.pdf");
 
         using var inDoc = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Modify);
         var font = new XFont("Arial", 12, XFontStyle.Bold);
@@ -721,7 +737,7 @@ public class PdfProcessingEngine : IProcessingEngine
 
         if (toPdf)
         {
-            var outPdf = Path.Combine(targetDir, $"{baseName}.pdf");
+            var outPdf = GetUniqueOutputPath(targetDir, $"{baseName}.pdf");
             using var doc = new PdfDocument();
             var fontTitle = new XFont("Arial", 16, XFontStyle.Bold);
             var fontBody = new XFont("Arial", 10.5, XFontStyle.Regular);
@@ -750,7 +766,7 @@ public class PdfProcessingEngine : IProcessingEngine
         }
         else
         {
-            var outTxt = Path.Combine(targetDir, $"{baseName}.txt");
+            var outTxt = GetUniqueOutputPath(targetDir, $"{baseName}.txt");
             await File.WriteAllLinesAsync(outTxt, paragraphs, cancellationToken);
             return outTxt;
         }
@@ -764,7 +780,7 @@ public class PdfProcessingEngine : IProcessingEngine
         var targetDir = outputDirectory ?? Path.GetDirectoryName(pdfPath) ?? Environment.CurrentDirectory;
         Directory.CreateDirectory(targetDir);
         var baseName = Path.GetFileNameWithoutExtension(pdfPath);
-        var outDocx = Path.Combine(targetDir, $"{baseName}.docx");
+        var outDocx = GetUniqueOutputPath(targetDir, $"{baseName}.docx");
 
         var textPath = await ExtractTextFromPdfAsync(pdfPath, cancellationToken);
         var lines = await File.ReadAllLinesAsync(textPath, cancellationToken);
@@ -832,14 +848,14 @@ public class PdfProcessingEngine : IProcessingEngine
             if (stream.Length > 4 && stream[0] == 0xFF && stream[1] == 0xD8)
             {
                 imgCount++;
-                var imgPath = Path.Combine(targetDir, $"{baseName}_image_{imgCount}.jpg");
+                var imgPath = GetUniqueOutputPath(targetDir, $"{baseName}_image_{imgCount}.jpg");
                 await File.WriteAllBytesAsync(imgPath, stream, cancellationToken);
                 results.Add(imgPath);
             }
             else if (stream.Length > 8 && stream[0] == 0x89 && stream[1] == 0x50 && stream[2] == 0x4E && stream[3] == 0x47)
             {
                 imgCount++;
-                var imgPath = Path.Combine(targetDir, $"{baseName}_image_{imgCount}.png");
+                var imgPath = GetUniqueOutputPath(targetDir, $"{baseName}_image_{imgCount}.png");
                 await File.WriteAllBytesAsync(imgPath, stream, cancellationToken);
                 results.Add(imgPath);
             }
@@ -848,7 +864,7 @@ public class PdfProcessingEngine : IProcessingEngine
         if (results.Count == 0)
         {
             using var preview = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(800, 1000);
-            var previewPath = Path.Combine(targetDir, $"{baseName}_page_1.png");
+            var previewPath = GetUniqueOutputPath(targetDir, $"{baseName}_page_1.png");
             await SixLabors.ImageSharp.ImageExtensions.SaveAsPngAsync(preview, previewPath, cancellationToken);
             results.Add(previewPath);
         }

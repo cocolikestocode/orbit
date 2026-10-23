@@ -111,8 +111,8 @@ public partial class App : Application
     {
         Dispatcher.Invoke(() =>
         {
-            // Query files from active explorer selection
-            var files = ShellSelectionHelper.GetSelectedFilesFromForegroundExplorer();
+            // Query files from active explorer selection or desktop
+            var files = ShellSelectionHelper.GetSelectedFiles(screenX, screenY);
             _overlayWindow?.ShowAt(screenX, screenY, files);
         });
     }

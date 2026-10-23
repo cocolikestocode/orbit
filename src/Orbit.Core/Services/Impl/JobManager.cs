@@ -13,6 +13,8 @@ public class JobManager : IJobManager
 {
     private readonly IEnumerable<IProcessingEngine> _engines;
     private readonly ConcurrentDictionary<string, JobInfo> _jobs = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellations = new();
+    private readonly SemaphoreSlim _concurrencyLimit = new(Math.Max(2, Environment.ProcessorCount));
     private readonly List<JobInfo> _history = new();
     private readonly object _lock = new();
 
@@ -36,21 +38,58 @@ public class JobManager : IJobManager
             Status = GestureState.Processing
         };
 
+        var cts = new CancellationTokenSource();
+        _cancellations[jobId] = cts;
         _jobs[jobId] = jobInfo;
 
-        // Start processing in background task
+        // Start processing in background task with concurrency throttle and cancellation support
         _ = Task.Run(async () =>
         {
-            await ProcessJobAsync(jobInfo);
+            try
+            {
+                await _concurrencyLimit.WaitAsync(cts.Token);
+                try
+                {
+                    await ProcessJobAsync(jobInfo, cts.Token);
+                }
+                finally
+                {
+                    _concurrencyLimit.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                var cancelledJob = jobInfo with
+                {
+                    Status = GestureState.Cancelled,
+                    Result = new OperationResult
+                    {
+                        OperationId = jobInfo.Request.OperationId,
+                        Success = false,
+                        ErrorMessage = "Operation was cancelled by user."
+                    },
+                    CompletedAt = DateTime.UtcNow
+                };
+
+                _jobs[jobId] = cancelledJob;
+                JobFailed?.Invoke(this, cancelledJob);
+            }
+            finally
+            {
+                _cancellations.TryRemove(jobId, out var removedCts);
+                removedCts?.Dispose();
+            }
         });
 
         return Task.FromResult(jobId);
     }
 
-    private async Task ProcessJobAsync(JobInfo job)
+    private async Task ProcessJobAsync(JobInfo job, CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             // Find engine by EngineId prefix, category prefix, or file family
             var engine = ResolveEngine(job.Request);
 
@@ -66,7 +105,7 @@ public class JobManager : IJobManager
                 JobProgressChanged?.Invoke(this, updated);
             });
 
-            var result = await engine.ExecuteAsync(job.Request, progress, CancellationToken.None);
+            var result = await engine.ExecuteAsync(job.Request, progress, cancellationToken);
 
             var completedJob = job with
             {
@@ -92,6 +131,23 @@ public class JobManager : IJobManager
                 JobFailed?.Invoke(this, completedJob);
             }
         }
+        catch (OperationCanceledException)
+        {
+            var cancelledJob = job with
+            {
+                Status = GestureState.Cancelled,
+                Result = new OperationResult
+                {
+                    OperationId = job.Request.OperationId,
+                    Success = false,
+                    ErrorMessage = "Operation cancelled."
+                },
+                CompletedAt = DateTime.UtcNow
+            };
+
+            _jobs[job.JobId] = cancelledJob;
+            JobFailed?.Invoke(this, cancelledJob);
+        }
         catch (Exception ex)
         {
             var failedJob = job with
@@ -113,6 +169,17 @@ public class JobManager : IJobManager
 
     public Task CancelAsync(string jobId)
     {
+        if (_cancellations.TryGetValue(jobId, out var cts))
+        {
+            try
+            {
+                cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
         if (_jobs.TryGetValue(jobId, out var job))
         {
             var cancelled = job with { Status = GestureState.Cancelled, CompletedAt = DateTime.UtcNow };

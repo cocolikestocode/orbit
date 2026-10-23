@@ -174,11 +174,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     case "video-convert-mp4":
                     case "media-video-to-mp4":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.mp4");
-                        if (string.Equals(outPath, file.FilePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            outPath = Path.Combine(dir, $"{baseName}_converted.mp4");
-                        }
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.mp4");
                         var args = $"-y -i \"{file.FilePath}\" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 192k -movflags +faststart \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -188,11 +184,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     case "video-convert-webm":
                     case "media-video-to-webm":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.webm");
-                        if (string.Equals(outPath, file.FilePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            outPath = Path.Combine(dir, $"{baseName}_converted.webm");
-                        }
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.webm");
                         var args = $"-y -i \"{file.FilePath}\" -c:v libvpx-vp9 -b:v 0 -crf 30 -c:a libopus \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -202,7 +194,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     case "video-extract-audio":
                     case "media-extract-audio-mp3":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.mp3");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.mp3");
                         var args = $"-y -i \"{file.FilePath}\" -vn -c:a libmp3lame -q:a 2 \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -212,7 +204,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     case "media-extract-audio-wav":
                     case "media-audio-to-wav":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.wav");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.wav");
                         var args = $"-y -i \"{file.FilePath}\" -vn -c:a pcm_s16le \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -221,7 +213,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-audio-to-mp3":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.mp3");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.mp3");
                         var args = $"-y -i \"{file.FilePath}\" -c:a libmp3lame -q:a 2 \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -230,7 +222,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-audio-to-flac":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.flac");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.flac");
                         var args = $"-y -i \"{file.FilePath}\" -c:a flac \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -240,7 +232,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     case "video-convert-gif":
                     case "media-video-to-gif":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}.gif");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}.gif");
                         var args = $"-y -i \"{file.FilePath}\" -vf \"fps=10,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse\" -loop 0 \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -252,7 +244,7 @@ public class MediaProcessingEngine : IProcessingEngine
                     {
                         var start = request.Parameters.TryGetValue("startTime", out var s) ? s.ToString() : "00:00:00";
                         var end = request.Parameters.TryGetValue("endTime", out var e) ? e.ToString() : "00:00:10";
-                        var outPath = Path.Combine(dir, $"{baseName}_trimmed{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_trimmed{file.Extension}");
                         var args = $"-y -ss {start} -to {end} -i \"{file.FilePath}\" -c copy \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -261,7 +253,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-compress-video":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}_compressed.mp4");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_compressed.mp4");
                         var args = $"-y -i \"{file.FilePath}\" -c:v libx264 -crf 28 -preset medium -c:a aac -b:a 128k \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -270,7 +262,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-compress-audio":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}_compressed.mp3");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_compressed.mp3");
                         var args = $"-y -i \"{file.FilePath}\" -c:a libmp3lame -b:a 128k \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -279,7 +271,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-mute-audio":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}_muted{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_muted{file.Extension}");
                         var args = $"-y -i \"{file.FilePath}\" -c:v copy -an \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -288,7 +280,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-adjust-volume":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}_boosted{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_boosted{file.Extension}");
                         var args = $"-y -i \"{file.FilePath}\" -filter:a \"volume=1.5\" -c:v copy \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -297,7 +289,7 @@ public class MediaProcessingEngine : IProcessingEngine
 
                     case "media-resize-resolution":
                     {
-                        var outPath = Path.Combine(dir, $"{baseName}_720p{file.Extension}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}_720p{file.Extension}");
                         var args = $"-y -i \"{file.FilePath}\" -vf \"scale=-2:720\" -c:v libx264 -crf 23 -c:a copy \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -323,7 +315,7 @@ public class MediaProcessingEngine : IProcessingEngine
                             ? (request.OutputFormat.StartsWith(".") ? request.OutputFormat : "." + request.OutputFormat)
                             : ".mp4";
 
-                        var outPath = Path.Combine(dir, $"{baseName}{targetExt}");
+                        var outPath = GetUniqueOutputPath(dir, $"{baseName}{targetExt}");
                         var args = $"-y -i \"{file.FilePath}\" \"{outPath}\"";
                         await RunFfmpegProcessAsync(ffmpegPath!, args, cancellationToken);
                         outputFiles.Add(outPath);
@@ -356,6 +348,22 @@ public class MediaProcessingEngine : IProcessingEngine
         }
     }
 
+    public static string GetUniqueOutputPath(string directory, string fileName)
+    {
+        var fullPath = Path.Combine(directory, fileName);
+        if (!File.Exists(fullPath)) return fullPath;
+
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        int counter = 1;
+        while (File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(directory, $"{nameWithoutExt}_{counter}{ext}");
+            counter++;
+        }
+        return fullPath;
+    }
+
     public static async Task RunFfmpegProcessAsync(string ffmpegPath, string arguments, CancellationToken cancellationToken = default)
     {
         var psi = new ProcessStartInfo
@@ -369,6 +377,11 @@ public class MediaProcessingEngine : IProcessingEngine
         };
 
         using var process = new Process { StartInfo = psi };
+        using var registration = cancellationToken.Register(() =>
+        {
+            try { process.Kill(entireProcessTree: true); } catch { }
+        });
+
         var stderr = new StringBuilder();
 
         process.ErrorDataReceived += (s, e) =>
@@ -398,7 +411,7 @@ public class MediaProcessingEngine : IProcessingEngine
         var metadata = new Dictionary<string, object>();
         var dir = Path.GetDirectoryName(mediaPath) ?? Environment.CurrentDirectory;
         var baseName = Path.GetFileNameWithoutExtension(mediaPath);
-        var reportPath = Path.Combine(dir, $"{baseName}_media_analysis.txt");
+        var reportPath = GetUniqueOutputPath(dir, $"{baseName}_media_analysis.txt");
 
         var fileInfo = new FileInfo(mediaPath);
         metadata["FileSize"] = fileInfo.Length;

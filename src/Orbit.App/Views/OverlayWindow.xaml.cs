@@ -2,6 +2,7 @@ namespace Orbit.App.Views;
 
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -73,8 +74,38 @@ public partial class OverlayWindow : Window
         var dipPt = ScreenToDip(screenX, screenY);
 
         // Center window on cursor in DIP coordinates
-        Left = dipPt.X - (Width / 2.0);
-        Top = dipPt.Y - (Height / 2.0);
+        double targetLeft = dipPt.X - (Width / 2.0);
+        double targetTop = dipPt.Y - (Height / 2.0);
+
+        // Clamp to monitor work area so radial wheel is never clipped off-screen across multi-monitors
+        try
+        {
+            var hMon = Win32.MonitorFromPoint(new Win32.POINT { x = screenX, y = screenY }, Win32.MONITOR_DEFAULTTONEAREST);
+            if (hMon != IntPtr.Zero)
+            {
+                var mi = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+                if (Win32.GetMonitorInfo(hMon, ref mi))
+                {
+                    var topLeftDip = ScreenToDip(mi.rcWork.left, mi.rcWork.top);
+                    var bottomRightDip = ScreenToDip(mi.rcWork.right, mi.rcWork.bottom);
+
+                    double minLeft = topLeftDip.X + 8;
+                    double maxLeft = Math.Max(minLeft, bottomRightDip.X - Width - 8);
+                    double minTop = topLeftDip.Y + 8;
+                    double maxTop = Math.Max(minTop, bottomRightDip.Y - Height - 8);
+
+                    targetLeft = Math.Clamp(targetLeft, minLeft, maxLeft);
+                    targetTop = Math.Clamp(targetTop, minTop, maxTop);
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to unconstrained
+        }
+
+        Left = targetLeft;
+        Top = targetTop;
 
         if (files != null && files.Length > 0)
         {

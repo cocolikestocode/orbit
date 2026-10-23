@@ -451,7 +451,7 @@ public class ArchiveProcessingEngine : IProcessingEngine
         }
 
         // Now encrypt the archive using AES-256 standard encryption
-        var encPath = Path.Combine(targetDir, $"{zipBaseName}.orbit.enc");
+        var encPath = GetUniqueOutputPath(targetDir, $"{zipBaseName}.orbit.enc");
         await EncryptFileWithAesAsync(destinationZip, encPath, password, cancellationToken);
         
         // Remove unencrypted intermediate zip if different
@@ -499,6 +499,22 @@ public class ArchiveProcessingEngine : IProcessingEngine
         }
     }
 
+    public static string GetUniqueOutputPath(string directory, string fileName)
+    {
+        var fullPath = Path.Combine(directory, fileName);
+        if (!File.Exists(fullPath)) return fullPath;
+
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        int counter = 1;
+        while (File.Exists(fullPath))
+        {
+            fullPath = Path.Combine(directory, $"{nameWithoutExt}_{counter}{ext}");
+            counter++;
+        }
+        return fullPath;
+    }
+
     private static async Task<(string ReportFilePath, Dictionary<string, object> Metadata)> AnalyzeIntegrityAsync(
         string archivePath,
         CancellationToken cancellationToken)
@@ -506,7 +522,7 @@ public class ArchiveProcessingEngine : IProcessingEngine
         var metadata = new Dictionary<string, object>();
         var dir = Path.GetDirectoryName(archivePath) ?? Environment.CurrentDirectory;
         var baseName = Path.GetFileNameWithoutExtension(archivePath);
-        var reportPath = Path.Combine(dir, $"{baseName}_integrity.txt");
+        var reportPath = GetUniqueOutputPath(dir, $"{baseName}_integrity.txt");
 
         int entryCount = 0;
         int fileCount = 0;
